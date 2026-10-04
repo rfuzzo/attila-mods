@@ -4,7 +4,7 @@ Personal Total War: ATTILA mods and tools for macOS (Apple Silicon, Feral port 1
 
 ## Layout
 
-- `tools/twpack`: pack tool in Rust on `rpfm_lib` (pinned to RPFM tag `v5.1.1`, keep default features or it doesn't compile). Currently a spike: `twpack <pack> <schema.ron> <dest>` exports the `regions` table. `Container::extract` with a schema writes DB tables as TSV.
+- `tools/twpack`: pack tool in Rust on `rpfm_lib` (pinned to RPFM tag `v5.1.1`, keep default features or it doesn't compile). Build with `cargo build --release`, binary `tools/twpack/target/release/twpack`. Commands (`--help` on each): `ls <pack> [pattern]`, `extract <pack> -o <dir> [pattern] [--raw]`, `db export <pack> [table] -o <dir>`, `db import <pack> <tsv>...`, `loc export <pack> -o <dir>`, `build <folder> -o <out.pack>`. Patterns are case-insensitive prefixes or `*` globs. `--schema` defaults to `extracted/schemas/schema_att.ron`. rpfm_lib's `Container::extract` / `insert_file` silently fall back to binary on TSV errors, so twpack does TSV export / import itself.
 - `mods/`: mods (none yet).
 - `extracted/`: unpacked game / mod content and `schemas/schema_att.ron` (from rpfm-schemas), **git-ignored, never commit it**.
 

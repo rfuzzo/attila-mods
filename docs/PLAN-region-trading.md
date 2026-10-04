@@ -1,6 +1,6 @@
 # Region trading – plan
 
-Status: 2026-10-04, Phase 1 spike done. Personal use for now (the mod would contain modified code from Fireforged Empire and Region Trading Reloaded, publishing needs their authors' permission). The mod may require [TWASE](https://github.com/rfuzzo/twase_macos).
+Status: 2026-10-04, Phase 1 done (`twpack` works), Phase 2 next. Personal use for now (the mod would contain modified code from Fireforged Empire and Region Trading Reloaded, publishing needs their authors' permission). The mod may require [TWASE](https://github.com/rfuzzo/twase_macos).
 
 ## Goal
 
@@ -23,12 +23,15 @@ Unify the region trading of **Fireforged Empire** and **Region Trading Reloaded*
 ## Phase 1: pack tool for macOS (`tools/twpack`, Rust on `rpfm_lib`)
 
 1. ✅ Spike (2026-10-04): `rpfm_lib` v5.1.1 builds on arm64 macOS (Rust 1.94). It opens the base game's `data.pack` (50,763 files, 0.5 s with lazy loading) and decodes `db/regions_tables/regions` (v3, 519 rows) to TSV with `schema_att.ron`. Note: it doesn't compile with `default-features = false` (its UI layout XML code uses `serde_xml_rs` unconditionally), so `twpack` keeps the default features. The schema goes to `extracted/schemas/` (from rpfm-schemas, MIT).
-2. Commands: `ls`, `extract` (all or filtered), `db export` / `db import` (TSV), `loc export`, `build` (folder of Lua / TSV / UI files → `.pack`).
-3. Fallback if the spike fails: a Python extractor for raw files (Lua, text, UI layouts; no DB decoding).
+2. ✅ Commands (2026-10-04): `ls`, `extract` (all or filtered by prefix / `*` glob), `db export` / `db import` (TSV), `loc export`, `build` (folder → PFH4 mod pack, `.tsv` files become tables, hidden files skipped). The schema defaults to `extracted/schemas/schema_att.ron`.
+   - Tested: `data.pack` exports 754 tables in 0.3 s. 647 decode, 103 are empty tables in versions the schema doesn't know (harmless), 4 have data or a version the schema lacks: `models_artillery` (v0), `models_naval` (v11), plus `regions_to_region_groups_junctions` and `land_unit_articulated_vehicles` (both v0 with 0 rows). None of them matter for region trading. `local_en.pack` (in `data/localisation/en/`) exports 171 loc files.
+   - Round trip: extract `maga_reloaded.pack` → `build` (plus a TSV table) → extract gives identical files. `db import` → `db export` gives the same TSV. The header matches Workshop packs (PFH4, type Mod). rpfm_lib also writes its `*.rpfm_reserved` files into mod packs, like RPFM does.
+   - Not tested yet: the game loading a `twpack build` pack (first real test in Phase 5).
+3. ~~Fallback: Python extractor~~ (not needed).
 
 ## Phase 2: unpack into `extracted/` (git-ignored)
 
-- base game: `data.pack`, DLC packs `belisarius`, `charlemagne`, `slavs`, English loc
+- base game: `data.pack`, DLC packs `belisarius`, `charlemagne`, `slavs`, English loc (`data/localisation/en/local_en.pack`)
 - `extracted/fireforged/` (3 packs), `extracted/rtr/`
 - Lua as is, DB tables as TSV, so everything can be grepped and diffed (a local git repo inside `extracted/` makes version diffs easy)
 
