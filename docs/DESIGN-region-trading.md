@@ -8,6 +8,8 @@ Attila still has Rome II's region trading in its engine, used only for "Gift Reg
 
 Regions are weighed against the other diplomacy options in the same deal. Historically accurate: cessions were bundled with other terms (Jovian ceded Nisibis for peace, 363; the Visigoths got Aquitania for military service, 418, i.e. land for an alliance; Valentinian III recognised the Vandal conquests together with a betrothal, 442; Attila's strip south of the Danube on top of the tribute, 449). Consequences: the region value must be on the AI's deal score scale (calibration), and may be negative for the receiver (a distant enclave in revolt is a burden), so a worthless region can't buy an alliance.
 
+Decided 2026-10-04: regions can also be traded **during a war**, in peace negotiations ("region for peace", the most common cession of the period). A region's value **can be negative** for the receiver (no 200 floor); the AI then refuses it as a burden.
+
 | Fireforged / design | Native deal | What we add |
 |---|---|---|
 | region → gold / instalments | Gift Region + demand Payments | the region's value in the evaluation (TWASE hook; today the deal score gives regions +0.0) |

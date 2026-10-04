@@ -108,7 +108,7 @@ function value.of(region_key, faction_key)
 		parts.unrest = unrest;
 	end;
 
-	local total = math.max(base * factor, config.min_value);
+	local total = base * factor;
 	parts.factor = factor;
 	return math.floor(total + 0.5), parts;
 end;

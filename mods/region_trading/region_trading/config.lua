@@ -9,7 +9,7 @@ return {
 	religion_factor = 0.20,          -- +/- this, x majority religion share, same / other religion than the receiver's
 	unrest_per_point = 0.01,         -- - this per point of negative public order
 	unrest_floor = 0.5,              -- unrest can't take the value below this factor
-	min_value = 200,                 -- every region is worth at least this
+	-- no floor: a region can be a burden (negative value) for the receiver, decided 2026-10-04
 
 	-- Relationship
 	attitude_share = 0.01,           -- share of the deal value per point of the AI's attitude towards the player
