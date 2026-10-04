@@ -35,6 +35,9 @@ rt.cm():register_first_tick_callback(function()
 		end;
 	end;
 
+	rt.log("localise: %s / %s / missing key -> %s", tostring(rt.localise("factions_screen_name_" .. player)),
+		tostring(rt.localise("campaign_localised_strings_string_gdp_farming")), tostring(rt.localise("no_such_loc_key")));
+
 	-- Wealth of the player's regions, to compare with the province panel.
 	local regions = world:faction_by_key(player):region_list();
 	for i = 0, regions:num_items() - 1 do
@@ -45,6 +48,6 @@ rt.cm():register_first_tick_callback(function()
 			table.insert(parts, string.format("%s %d", category, values.total));
 		end;
 		table.sort(parts);
-		rt.log("  %s (%s): wealth %s (%s)", key, tostring(rt.province(key)), tostring(total), table.concat(parts, ", "));
+		rt.log("  %s (%s): wealth %s (%s)", rt.region_name(key), tostring(rt.province_name(rt.province(key))), tostring(total), table.concat(parts, ", "));
 	end;
 end);

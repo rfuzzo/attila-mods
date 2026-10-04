@@ -46,4 +46,18 @@ function rt.unit(key)
 	return twase and twase.unit and twase.unit(key) or nil;
 end;
 
+-- Localised text of a loc key, nil if missing or without TWASE.
+function rt.localise(key)
+	return twase and twase.localise and twase.localise(key) or nil;
+end;
+
+-- Display names, falling back to the key.
+function rt.region_name(key)
+	return rt.localise("regions_onscreen_" .. key) or key;
+end;
+
+function rt.province_name(key)
+	return key and (rt.localise("provinces_onscreen_" .. key) or key);
+end;
+
 return rt;
