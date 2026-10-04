@@ -1,6 +1,6 @@
 # Region trading – plan
 
-Status: 2026-10-04, Phases 1 and 2 done, Phase 3 (analysis) next. Personal use for now (the mod would contain modified code from Fireforged Empire and Region Trading Reloaded, publishing needs their authors' permission). The mod may require [TWASE](https://github.com/rfuzzo/twase_macos).
+Status: 2026-10-04, Phases 1–3 done, analysis in `docs/ANALYSIS-region-trading.md`. Next: one in-game test (native `"regions"` diplomacy, see the analysis), then Phase 4 (design, together). Personal use for now (the mod would contain modified code from Fireforged Empire and Region Trading Reloaded, publishing needs their authors' permission). The mod may require [TWASE](https://github.com/rfuzzo/twase_macos).
 
 ## Goal
 
@@ -43,7 +43,12 @@ First findings:
 - The two `maga` trees are identical except `maga/script/regionTrading.lua` and `maga/script/ui/regionTrading.lua` (RTR has the UI file too, not only Fireforged).
 - Fireforged replaces only `campaigns/main_attila/scripting.lua` (plus many own campaign scripts there), RTR replaces the `scripting.lua` of `main_attila`, `bel_attila` and `cha_attila`.
 
-## Phase 3: analysis
+## Phase 3: analysis ✅
+
+Done 2026-10-04, results in [`ANALYSIS-region-trading.md`](ANALYSIS-region-trading.md). Short version: Fireforged's change is a few lines (gift → +3,000 gold, "trade" → +2 recruitment slots for 16 turns, the AI region isn't transferred) on top of RTR's unchanged UI; neither mod asks the AI. RTR's `scripting.lua` only adds `require("maga/init")`. The engine still knows a `"regions"` diplomacy type (to test), and `CAI_INTERFACE::get_faction_attitude` is the TWASE candidate for the AI's attitude.
+
+Original tasks:
+
 
 - diff the two `maga` copies (Fireforged vs RTR), separate the shared core from each mod's changes
 - map the mechanics: how trades are offered, how they're executed (which `cm` / interface calls transfer regions, money, troops), which UI they inject, where Fireforged's jank comes from
