@@ -34,4 +34,17 @@ rt.cm():register_first_tick_callback(function()
 			shown = shown + 1;
 		end;
 	end;
+
+	-- Wealth of the player's regions, to compare with the province panel.
+	local regions = world:faction_by_key(player):region_list();
+	for i = 0, regions:num_items() - 1 do
+		local key = regions:item_at(i):name();
+		local total, breakdown = rt.region_wealth(key);
+		local parts = {};
+		for category, values in pairs(breakdown or {}) do
+			table.insert(parts, string.format("%s %d", category, values.total));
+		end;
+		table.sort(parts);
+		rt.log("  %s: wealth %s (%s)", key, tostring(total), table.concat(parts, ", "));
+	end;
 end);

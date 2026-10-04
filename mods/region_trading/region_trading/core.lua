@@ -24,4 +24,11 @@ function rt.attitude(a, b)
 	return twase.faction_attitude(world:faction_by_key(a), world:faction_by_key(b));
 end;
 
+-- The region's wealth (GDP before tax) and its breakdown { <category> = { base, total, bonus_percent } }.
+-- nil without TWASE's Lua API.
+function rt.region_wealth(key)
+	if not (twase and twase.region_wealth) then return nil end;
+	return twase.region_wealth(rt.world():region_manager():region_by_key(key));
+end;
+
 return rt;
