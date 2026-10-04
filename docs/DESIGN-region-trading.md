@@ -2,6 +2,18 @@
 
 Draft 2026-10-04, decisions from the Phase 4 discussion. Background: [`ANALYSIS-region-trading.md`](ANALYSIS-region-trading.md).
 
+## Direction change (2026-10-04): native deals with a map UI
+
+Attila still has Rome II's region trading in its engine, used only for "Gift Region" to settle hordes. TWASE widens its rules (dev switch `twase.dev_native_region_trading(true)`), and it works end to end: the region is a real deal component, the AI answers, the game transfers the region. Decision: **map UI on native deals**. A MAGA-style tactical map selection fills the native deal underneath. That gives the native AI answer and transfer, and gold / instalments for free as native Payments.
+
+| Fireforged / design | Native deal | What we add |
+|---|---|---|
+| region → gold / instalments | Gift Region + demand Payments | the region's value in the evaluation (TWASE hook; today the deal score gives regions +0.0) |
+| region ↔ region | Gift Region + Demand Region (the AI's regions where your army stands, the engine's horde rule reused) | same |
+| region → federates | not native | an option in our UI, units after acceptance, their cost in the evaluation |
+
+The Lua panel / execution below stay as the fallback.
+
 ## Decisions
 
 | Topic | Decision |
