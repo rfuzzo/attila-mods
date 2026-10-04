@@ -10,14 +10,10 @@ local REGION = "att_reg_lusitania_olisipo";
 
 local function log(fmt, ...) rt.log("TEST " .. fmt, ...) end;
 
--- depth-first search for a component id
+-- the engine's own recursive search (Find(name, true)); the depth argument is ignored
 local function find_id(uic, id, depth)
-	if uic:Id() == id then return uic end;
-	if depth <= 0 then return nil end;
-	for i = 0, uic:ChildCount() - 1 do
-		local found = find_id(UIComponent(uic:Find(i)), id, depth - 1);
-		if found then return found end;
-	end;
+	local found = uic:Find(id, true);
+	return found and UIComponent(found) or nil;
 end;
 
 local function texts(uic, out, depth)
@@ -48,24 +44,45 @@ local function open_with_ai()
 	};
 end;
 
+local function list_rows(list_id)
+	local list = find_id(kit.root(), list_id, 14);
+	local box = list and find_id(list, "list_box", 4);
+	local rows = {};
+	if box then
+		box = UIComponent(box);
+		for i = 0, box:ChildCount() - 1 do
+			local child = box:Find(i);
+			if child then table.insert(rows, UIComponent(child)) end;
+		end;
+	end;
+	return rows;
+end;
+
 local steps = {};
 table.insert(steps, function() log("native region trading: %s", tostring(twase.dev_native_region_trading(true))) end);
 for _, f in ipairs(open_with_ai()) do table.insert(steps, f) end;
 table.insert(steps, function() actions("native"); click("add_offer_button") end);
-table.insert(steps, function() log("SHOT list") end);
+table.insert(steps, function() click("diplomac_action_possible_6") end);
 table.insert(steps, function()
-	-- the rows are named diplomatic_list_button_<type> / diplomac_action_possible_<type>
-	local list = find_id(kit.root(), "list_possible_actions", 12);
-	if list then
-		local box = list:Find("list_box");
-		if box then
-			box = UIComponent(box);
-			for i = 0, box:ChildCount() - 1 do log("  row %s", UIComponent(box:Find(i)):Id()) end;
-		end;
-	end;
-	click("diplomac_action_possible_6");
+	local offers, demands = list_rows("list_offers"), list_rows("list_demands");
+	log("gift region panel: %d offers, %d demands", #offers, #demands);
+	for i, row in ipairs(offers) do if i <= 5 then log("  offer row %s: %s", row:Id(), tostring(row:GetStateText())) end end;
+	log("SHOT panel");
 end);
-table.insert(steps, function() log("SHOT clicked") end);
+table.insert(steps, function()
+	local offers = list_rows("list_offers");
+	if offers[1] then
+		-- tick a region from the middle of the list, not the first (alphabetical) one
+		local row = offers[math.min(5, #offers)];
+		local box = find_id(row, "checkbox", 3);
+		if box then box:SimulateClick() end;
+		log("ticking %s: %s", row:Id(), tostring(row:GetStateText()));
+	end;
+end);
+table.insert(steps, function() click("ok_trade_regions") end);
+table.insert(steps, function() log("SHOT offer") end);
+table.insert(steps, function() click("button_send") end);
+table.insert(steps, function() log("SHOT answer") end);
 table.insert(steps, function() log("done") end);
 
 rt.cm():register_first_tick_callback(function()
