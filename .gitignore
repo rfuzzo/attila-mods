@@ -1,0 +1,7 @@
+# unpacked game and mod content, never commit it
+extracted/
+
+# rust
+target/
+
+.DS_Store

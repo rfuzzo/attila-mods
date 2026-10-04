@@ -1,0 +1,10 @@
+[package]
+name = "twpack"
+version = "0.1.0"
+edition = "2021"
+description = "Total War pack tool for macOS (Attila), built on rpfm_lib"
+license = "MIT"
+
+[dependencies]
+rpfm_lib = { git = "https://github.com/Frodo45127/rpfm.git", tag = "v5.1.1" }
+anyhow = "1"
