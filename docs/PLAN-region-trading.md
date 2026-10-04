@@ -1,6 +1,6 @@
 # Region trading – plan
 
-Status: 2026-10-04, Phase 1 done (`twpack` works), Phase 2 next. Personal use for now (the mod would contain modified code from Fireforged Empire and Region Trading Reloaded, publishing needs their authors' permission). The mod may require [TWASE](https://github.com/rfuzzo/twase_macos).
+Status: 2026-10-04, Phases 1 and 2 done, Phase 3 (analysis) next. Personal use for now (the mod would contain modified code from Fireforged Empire and Region Trading Reloaded, publishing needs their authors' permission). The mod may require [TWASE](https://github.com/rfuzzo/twase_macos).
 
 ## Goal
 
@@ -29,11 +29,19 @@ Unify the region trading of **Fireforged Empire** and **Region Trading Reloaded*
    - Not tested yet: the game loading a `twpack build` pack (first real test in Phase 5).
 3. ~~Fallback: Python extractor~~ (not needed).
 
-## Phase 2: unpack into `extracted/` (git-ignored)
+## Phase 2: unpack into `extracted/` (git-ignored) ✅
 
-- base game: `data.pack`, DLC packs `belisarius`, `charlemagne`, `slavs`, English loc (`data/localisation/en/local_en.pack`)
-- `extracted/fireforged/` (3 packs), `extracted/rtr/`
-- Lua as is, DB tables as TSV, so everything can be grepped and diffed (a local git repo inside `extracted/` makes version diffs easy)
+Done 2026-10-04 with `tools/extract-all.sh` (1.3 s, 96 MB, re-run after updates). Only text-like content: DB tables and loc as TSV, Lua, UI layouts, XML; images, models, animations, shaders, pathfinding and wind data are skipped.
+
+- `extracted/game/{data,belisarius,charlemagne,local_en}`: the DLC packs hold no DB tables, only campaign Lua, UI and terrain; `slavs.pack` only has movies
+- `extracted/fireforged/{1,ballast}`: `@Fireforged-Empire_2.pack` is only models and textures, skipped. All 195 Fireforged DB tables decode.
+- `extracted/rtr/`
+- `extracted/PACKS.txt`: pack timestamps and sizes. `extracted/` is its own git repo (baseline commit), so `git -C extracted diff` shows what an update changed.
+
+First findings:
+
+- The two `maga` trees are identical except `maga/script/regionTrading.lua` and `maga/script/ui/regionTrading.lua` (RTR has the UI file too, not only Fireforged).
+- Fireforged replaces only `campaigns/main_attila/scripting.lua` (plus many own campaign scripts there), RTR replaces the `scripting.lua` of `main_attila`, `bel_attila` and `cha_attila`.
 
 ## Phase 3: analysis
 

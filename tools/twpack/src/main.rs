@@ -1,7 +1,7 @@
 // twpack: Total War pack tool for macOS (Attila), built on rpfm_lib.
 //
 //   twpack ls <pack> [pattern...]                     list files
-//   twpack extract <pack> -o <dir> [pattern...]       extract files (DB / loc as TSV)
+//   twpack extract <pack> -o <dir> [pattern...] [-x pattern]  extract files (DB / loc as TSV)
 //   twpack db export <pack> -o <dir> [table...]       export DB tables as TSV
 //   twpack db import <pack> <tsv...>                  import TSV tables into an existing pack
 //   twpack loc export <pack> -o <dir> [pattern...]    export loc files as TSV
@@ -47,6 +47,9 @@ enum Command {
         patterns: Vec<String>,
         #[arg(short, long)]
         out: PathBuf,
+        /// Skip paths matching this pattern (repeatable), e.g. `-x '*.png'`
+        #[arg(short = 'x', long)]
+        exclude: Vec<String>,
         /// Extract DB tables and loc files as binary
         #[arg(long)]
         raw: bool,
@@ -141,10 +144,10 @@ fn main() -> Result<()> {
                 }
             }
         }
-        Command::Extract { pack, patterns, out, raw, schema } => {
+        Command::Extract { pack, patterns, out, exclude, raw, schema } => {
             let schema = if raw { None } else { schema.load()? };
             let mut pack = open(&pack, game)?;
-            let paths = matching(&pack, |path| matches_any(path, &patterns));
+            let paths = matching(&pack, |path| matches_any(path, &patterns) && (exclude.is_empty() || !matches_any(path, &exclude)));
             extract(&mut pack, paths, &out, &schema)?;
         }
         Command::Db { command: DbCommand::Export { pack, tables, out, schema } } => {
