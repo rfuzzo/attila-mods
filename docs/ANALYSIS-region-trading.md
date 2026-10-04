@@ -78,7 +78,8 @@ Useful **actions** (`game_interface`, called as `cm:<name>`):
 ### Native region trading?
 
 `force_diplomacy` still lists **`"regions"`** as a diplomacy type (with "state gift", "payments", "technology", …), and the DB keeps `offer_regions` / `demand_regions` / `reject_*_regions` in `diplomacy_keys`. Nothing in the vanilla scripts disables it. But the AI's deal evaluation (`cai_personality_deal_evaluation_deal_component_names`) has **no region component**, and Attila's diplomacy UI has no region list. It's most likely a leftover from Empire / Rome II.
-**To test in game** (TWASE console, cheap): `cm:force_diplomacy(cm:get_local_faction(), "<ai faction>", "regions", true, true)`, then open diplomacy with that faction. If a region option appears and the AI evaluates it, that's a much better base than a Lua UI.
+**To test in game** (TWASE console, `EpisodicScriptingEnv` context): `get_cm():force_diplomacy(get_cm():get_local_faction(), "att_fact_saxones", "regions", true, true)`, then open diplomacy with that faction. If a region option appears and the AI evaluates it, that's a much better base than a Lua UI.
+(The global `cm` is nil in the console. The game library itself uses `get_cm()`, which returns `__campaign_manager`, set in `campaign_manager:new`. `campaign_manager` is the class, not the instance, so `campaign_manager:force_diplomacy` finds no `game_interface`.)
 
 ### Deal evaluation (from TWASE)
 
@@ -99,6 +100,26 @@ Useful **actions** (`game_interface`, called as `cm:<name>`):
 3. Optional: the region's **income** (the game shows it in the province panel; no Lua getter).
 
 TWASE has no `twase.*` Lua API yet; adding one is a TWASE-side task (register C functions into the `EpisodicScriptingEnv` state after `RunStartupPath`).
+
+## Hardcoded data in MAGA → runtime sources
+
+| Hardcoded in MAGA | Problem | Replacement |
+|---|---|---|
+| `maga/data/<campaign>/regions.lua` (province → regions) | dead code, vanilla regions only | if we need provinces: the loaded game DB (`region_to_province_junctions`, includes every mod's changes) through a TWASE function |
+| Map overlay: one layout + PNG per region and colour (`ui/bin/img/map/<region>_{green,yellow}`, about 1,800 files) | vanilla map regions of 3 campaigns only, every new region or campaign needs new images, most of the pack's size | drop it. Settlement icons are already greyed out with a shader for untradable regions; that or a native region highlight (to research) is enough |
+| Region display name parsed from the settlement icon's tooltip | breaks with other languages / UI mods | native loc lookup of `regions_onscreen_<key>` through TWASE (Lua only has `compare_localised_string`, no getter) |
+| Settlement icon ids `radar_icon_settlement:<region>` (bel_attila: `<province>:<name>`) | engine-generated, fine | keep, but parse generically |
+| UI component paths (`diplomacy_dropdown/offers_panel/…`) | unavoidable for UI scripting | keep, in one table, checked once when the panel opens |
+| Rules and rewards: 3,000 gold, `rex_bundle_treaty_federates_region`, 16 turns, one trade per turn | fixed numbers | a config table, rewards scaled by the score |
+| Only `main_attila` (Fireforged) | | TWASE's loader: one small `campaigns/<campaign>/mods/region_trading/scripting.lua` per campaign, all requiring the same shared code |
+
+Already available at runtime in Lua (no hardcoding needed): all factions (`world():faction_list()`), a faction's regions (`region_list()`), all regions (`world():region_manager()`, `region_list` to confirm in the console), adjacency (`adjacent_region_list()`), capital (`home_region()`), buildings (`slot_list()`), religion, public order, alliance and war.
+
+**TWASE Lua API to add** (`twase.*`, registered into the `EpisodicScriptingEnv` state), in order of value:
+
+1. `twase.faction_attitude(a, b)`: `CAI_INTERFACE::get_faction_attitude` (address to find in BN)
+2. `twase.localise(key)`: the game's loc lookup (address to find)
+3. `twase.db_rows(table)` or targeted getters (province of a region, building level costs): reading the game's loaded DB tables, the biggest RE task. Fallback: Lua data generated from the merged DB by `twpack` at build time (generated, not hand-written, but blind to other mods).
 
 ## Open questions for Phase 4
 
