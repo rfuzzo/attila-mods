@@ -79,6 +79,8 @@ Useful **actions** (`game_interface`, called as `cm:<name>`):
 
 `force_diplomacy` still lists **`"regions"`** as a diplomacy type (with "state gift", "payments", "technology", …), and the DB keeps `offer_regions` / `demand_regions` / `reject_*_regions` in `diplomacy_keys`. Nothing in the vanilla scripts disables it. But the AI's deal evaluation (`cai_personality_deal_evaluation_deal_component_names`) has **no region component**, and Attila's diplomacy UI has no region list. It's most likely a leftover from Empire / Rome II.
 **To test in game** (TWASE console, `EpisodicScriptingEnv` context): `get_cm():force_diplomacy(get_cm():get_local_faction(), "att_fact_saxones", "regions", true, true)`, then open diplomacy with that faction. If a region option appears and the AI evaluates it, that's a much better base than a Lua UI.
+**Tested 2026-10-04 (MAGA disabled): no region option.** After the call, the "Add Offer/Demand" list for the Saxons shows only the usual options (payments, trade agreement, alliances, access, puppet / tributary state, war, non-aggression pact). The `"regions"` type is a leftover without UI, so we need our own panel.
+Also confirmed in the console: `region_manager():region_list()`, a faction's `region_list()` and `campaign_ai():strategic_stance_between_factions(a, b)` all work from Lua. The console only prints returned values, so prefix expressions with `return`.
 (The global `cm` is nil in the console. The game library itself uses `get_cm()`, which returns `__campaign_manager`, set in `campaign_manager:new`. `campaign_manager` is the class, not the instance, so `campaign_manager:force_diplomacy` finds no `game_interface`.)
 
 ### Deal evaluation (from TWASE)
@@ -113,7 +115,7 @@ TWASE has no `twase.*` Lua API yet; adding one is a TWASE-side task (register C 
 | Rules and rewards: 3,000 gold, `rex_bundle_treaty_federates_region`, 16 turns, one trade per turn | fixed numbers | a config table, rewards scaled by the score |
 | Only `main_attila` (Fireforged) | | TWASE's loader: one small `campaigns/<campaign>/mods/region_trading/scripting.lua` per campaign, all requiring the same shared code |
 
-Already available at runtime in Lua (no hardcoding needed): all factions (`world():faction_list()`), a faction's regions (`region_list()`), all regions (`world():region_manager()`, `region_list` to confirm in the console), adjacency (`adjacent_region_list()`), capital (`home_region()`), buildings (`slot_list()`), religion, public order, alliance and war.
+Already available at runtime in Lua (no hardcoding needed): all factions (`world():faction_list()`), a faction's regions (`region_list()`), all regions (`world():region_manager():region_list()`, confirmed), adjacency (`adjacent_region_list()`), capital (`home_region()`), buildings (`slot_list()`), religion, public order, alliance and war.
 
 **TWASE Lua API to add** (`twase.*`, registered into the `EpisodicScriptingEnv` state), in order of value:
 
@@ -123,6 +125,6 @@ Already available at runtime in Lua (no hardcoding needed): all factions (`world
 
 ## Open questions for Phase 4
 
-- Is native `"regions"` diplomacy usable (test above)? That decides between "enable and tune the native option" and "keep a Lua panel".
+- ~~Is native `"regions"` diplomacy usable?~~ No (tested), we keep a Lua panel.
 - Do we keep RTR's tactical-map panel (works, but heavy and fragile) or a simpler list in the offers panel?
 - Fireforged's rewards: keep money / troops, but scaled by region value; troops as a stacking bundle per trade (several bundle keys) or as actual units (`create_force` / `add_unit_to_force`)?
