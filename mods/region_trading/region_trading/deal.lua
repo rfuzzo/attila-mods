@@ -38,8 +38,10 @@ local function relationship(ai_key, player_key, deal_value)
 
 	local attitude = rt.attitude(ai_key, player_key);
 	if attitude then
+		local share = math.max(-config.attitude_cap, math.min(config.attitude_cap, attitude * config.attitude_share));
 		parts.attitude = attitude;
-		total = total + attitude * config.attitude_gold;
+		parts.attitude_value = deal_value * share;
+		total = total + parts.attitude_value;
 	end;
 	if ai:allied_with(world:faction_by_key(player_key)) then
 		parts.alliance = deal_value * config.alliance_bonus;

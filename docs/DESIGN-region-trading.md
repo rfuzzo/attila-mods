@@ -66,7 +66,7 @@ All factors in one config table (`config.lua`), tuned by playing.
 ### Implementation (2026-10-04, `mods/region_trading/region_trading/{config,value,deal,explain}.lua`)
 
 - `value = max((wealth − building upkeep) × 10 + 25 % × Σ building create_cost × health, 200) × factors`. The factors (province complete ×1.3, enclave ×0.5, religion ×(1 ± 0.2 × majority share), unrest ×(1 − 1 % per negative public order point, min 0.5)) **multiply**. Deviation from the table below: all buildings count with 25 % of their cost (Lua can't tell economic from non-economic buildings; their yield is in the income anyway).
-- relationship: attitude × 20 + alliance 15 % + trade agreement 5 % of the deal value. Client state bonus: needs a TWASE getter (no vassal check in Lua).
+- relationship, all as shares of the deal value: attitude 1 % per point (capped at ±100 %, decided 2026-10-04: proportional, so the deal itself still matters), alliance 15 %, trade agreement 5 %. Client state bonus: needs a TWASE getter (no vassal check in Lua).
 - prices: money 50 % of the value (max 50 % of the AI's treasury), payments 70 % over 10 turns, troops up to 80 % in recruitment cost (copies of the land units in the AI's armies, no bodyguards, mixed, most expensive first), swap: the AI's value of its own region.
 - console: `region_trading.explain(region_key, ai_key[, kind[, ai_region_key]])` logs the evaluation with all parts.
 - First numbers (WRE 367, Olisipo): value ~1,700 for distant factions (enclave, unrest −20); the Visigoths (attitude −157) and Vandals (−40) refuse everything, the allied ERE (+76) accepts money / payments / troops; swaps fail because the AI values its own regions higher (they're not enclaves for it).

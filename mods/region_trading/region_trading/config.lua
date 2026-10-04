@@ -12,7 +12,8 @@ return {
 	min_value = 200,                 -- every region is worth at least this
 
 	-- Relationship
-	attitude_gold = 20,              -- per point of the AI's attitude towards the player
+	attitude_share = 0.01,           -- share of the deal value per point of the AI's attitude towards the player
+	attitude_cap = 1.0,              -- at most +/- this share of the deal value
 	alliance_bonus = 0.15,           -- share of the deal value
 	trade_agreement_bonus = 0.05,
 
