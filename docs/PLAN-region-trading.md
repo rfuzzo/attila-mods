@@ -1,6 +1,6 @@
 # Region trading – plan
 
-Status: 2026-10-04, Phases 1–3 done, analysis in `docs/ANALYSIS-region-trading.md`. The in-game test showed no native region diplomacy, so we build our own panel. Phase 4 design agreed in `docs/DESIGN-region-trading.md`. Phase 5 started: mod skeleton in `mods/region_trading/` (loader stubs, maga switched off at runtime, tested). TWASE first for the data the score needs: `twase.faction_attitude` built (TWASE branch `lua-api`), in-game test pending; next region GDP, DB reads, loc. Personal use for now (the mod would contain modified code from Fireforged Empire and Region Trading Reloaded, publishing needs their authors' permission). The mod may require [TWASE](https://github.com/rfuzzo/twase_macos).
+Status: 2026-10-04, Phases 1–3 done, analysis in `docs/ANALYSIS-region-trading.md`. The in-game test showed no native region diplomacy, so we build our own panel. Phase 4 design agreed in `docs/DESIGN-region-trading.md`. Phase 5 started: mod skeleton in `mods/region_trading/` (loader stubs, maga switched off at runtime, tested). TWASE first for the data the score needs: `twase.faction_attitude` and `twase.region_wealth` built and verified in game (TWASE branch `lua-api`); next DB reads, then loc. Personal use for now (the mod would contain modified code from Fireforged Empire and Region Trading Reloaded, publishing needs their authors' permission). The mod may require [TWASE](https://github.com/rfuzzo/twase_macos).
 
 ## Goal
 
