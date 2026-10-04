@@ -4,15 +4,17 @@ Draft 2026-10-04, decisions from the Phase 4 discussion. Background: [`ANALYSIS-
 
 ## Direction change (2026-10-04): native deals with a map UI
 
-Attila still has Rome II's region trading in its engine, used only for "Gift Region" to settle hordes. TWASE widens its rules (dev switch `twase.dev_native_region_trading(true)`), and it works end to end: the region is a real deal component, the AI answers, the game transfers the region. Decision: **map UI on native deals**. A MAGA-style tactical map selection fills the native deal underneath. That gives the native AI answer and transfer, and gold / instalments for free as native Payments.
+Attila still has Rome II's region trading in its engine, used only for "Gift Region" to settle hordes. TWASE widens its rules (dev switch `twase.dev_native_region_trading(true)`), and it works end to end: the region is a real deal component, the AI answers, the game transfers the region. Decision (updated): **the native deal and the native region list**, no map UI. Ticking a region in the list pans the map to it, which is enough; one region per deal like vanilla. That gives the native AI answer and transfer, and gold / instalments for free as native Payments.
+
+Regions are weighed against the other diplomacy options in the same deal. Historically accurate: cessions were bundled with other terms (Jovian ceded Nisibis for peace, 363; the Visigoths got Aquitania for military service, 418, i.e. land for an alliance; Valentinian III recognised the Vandal conquests together with a betrothal, 442; Attila's strip south of the Danube on top of the tribute, 449). Consequences: the region value must be on the AI's deal score scale (calibration), and may be negative for the receiver (a distant enclave in revolt is a burden), so a worthless region can't buy an alliance.
 
 | Fireforged / design | Native deal | What we add |
 |---|---|---|
 | region → gold / instalments | Gift Region + demand Payments | the region's value in the evaluation (TWASE hook; today the deal score gives regions +0.0) |
 | region ↔ region | Gift Region + Demand Region (the AI's regions where your army stands, the engine's horde rule reused) | same |
-| region → federates | not native | an option in our UI, units after acceptance, their cost in the evaluation |
+| region → federates | not native | an option (UI to decide), units after acceptance, their cost in the evaluation |
 
-The Lua panel / execution below stay as the fallback.
+The Lua panel / execution below stay as the fallback; the MAGA-style map UI is dropped.
 
 ## Decisions
 
