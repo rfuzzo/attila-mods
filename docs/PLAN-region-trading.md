@@ -1,6 +1,6 @@
 # Region trading – plan
 
-Status: 2026-10-04, Phases 1–3 done, analysis in `docs/ANALYSIS-region-trading.md`. The in-game test showed no native region diplomacy, so we build our own panel. Next: Phase 4 (design, together). Personal use for now (the mod would contain modified code from Fireforged Empire and Region Trading Reloaded, publishing needs their authors' permission). The mod may require [TWASE](https://github.com/rfuzzo/twase_macos).
+Status: 2026-10-04, Phases 1–3 done, analysis in `docs/ANALYSIS-region-trading.md`. The in-game test showed no native region diplomacy, so we build our own panel. Phase 4 design draft in `docs/DESIGN-region-trading.md` (open points at its end). Personal use for now (the mod would contain modified code from Fireforged Empire and Region Trading Reloaded, publishing needs their authors' permission). The mod may require [TWASE](https://github.com/rfuzzo/twase_macos).
 
 ## Goal
 
