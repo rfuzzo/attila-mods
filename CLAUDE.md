@@ -5,7 +5,9 @@ Personal Total War: ATTILA mods and tools for macOS (Apple Silicon, Feral port 1
 ## Layout
 
 - `tools/twpack`: pack tool in Rust on `rpfm_lib` (pinned to RPFM tag `v5.1.1`, keep default features or it doesn't compile). Build with `cargo build --release`, binary `tools/twpack/target/release/twpack`. Commands (`--help` on each): `ls <pack> [pattern]`, `extract <pack> -o <dir> [pattern] [--raw]`, `db export <pack> [table] -o <dir>`, `db import <pack> <tsv>...`, `loc export <pack> -o <dir>`, `build <folder> -o <out.pack>`. Patterns are case-insensitive prefixes or `*` globs. `--schema` defaults to `extracted/schemas/schema_att.ron`. rpfm_lib's `Container::extract` / `insert_file` silently fall back to binary on TSV errors, so twpack does TSV export / import itself.
-- `mods/`: mods (none yet).
+- `mods/<name>/`: mods, each folder mirrors the game's `data/` root (so it deploys as loose files or builds into a pack with `twpack build`).
+  - `mods/region_trading/`: the region trading mod (design: `docs/DESIGN-region-trading.md`). `campaigns/<campaign>/mods/region_trading/scripting.lua` are stubs for TWASE's loader, the code is in `region_trading/` (`init.lua` entry, `core.lua` shared table `rt` with `rt.log` / `rt.cm()`, `compat/maga.lua` removes Fireforged's / RTR's `MAGA_EventHandler_*` listeners). Logs go through `print` with the prefix `[region_trading]`.
+- `tools/deploy.sh [--remove] [mod]`: copy a mod as loose files into the game's `data/` folder (or remove them). `tools/extract-all.sh`: see `extracted/`.
 - `extracted/`: unpacked game / mod content (`game/`, `fireforged/`, `rtr/`, made by `tools/extract-all.sh`) and `schemas/schema_att.ron` (from rpfm-schemas), **git-ignored, never commit it**. It is its own local git repo for diffing versions.
 
 ## Paths
