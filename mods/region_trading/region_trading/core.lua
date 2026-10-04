@@ -17,4 +17,11 @@ function rt.world()
 	return get_cm():model():world();
 end;
 
+-- a's attitude towards b (faction keys), as the diplomacy screen shows it. nil without TWASE's Lua API.
+function rt.attitude(a, b)
+	if not (twase and twase.faction_attitude) then return nil end;
+	local world = rt.world();
+	return twase.faction_attitude(world:faction_by_key(a), world:faction_by_key(b));
+end;
+
 return rt;

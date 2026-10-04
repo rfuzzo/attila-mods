@@ -16,4 +16,22 @@ rt.cm():register_first_tick_callback(function()
 		world:region_manager():region_list():num_items(),
 		world:faction_by_key(player):region_list():num_items(),
 		world:faction_list():num_items());
+
+	if not twase then
+		rt.log("TWASE Lua API not available");
+		return;
+	end;
+
+	-- Attitudes in both directions for a few factions, to compare with the diplomacy screen.
+	rt.log("TWASE %s: attitudes (them -> player / player -> them)", twase.version);
+	local factions = world:faction_list();
+	local shown = 0;
+	for i = 0, factions:num_items() - 1 do
+		local key = factions:item_at(i):name();
+		local them = rt.attitude(key, player);
+		if key ~= player and them and them ~= 0 and shown < 10 then
+			rt.log("  %s: %s / %s", key, tostring(them), tostring(rt.attitude(player, key)));
+			shown = shown + 1;
+		end;
+	end;
 end);

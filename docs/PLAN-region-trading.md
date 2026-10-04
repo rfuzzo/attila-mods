@@ -1,6 +1,6 @@
 # Region trading – plan
 
-Status: 2026-10-04, Phases 1–3 done, analysis in `docs/ANALYSIS-region-trading.md`. The in-game test showed no native region diplomacy, so we build our own panel. Phase 4 design agreed in `docs/DESIGN-region-trading.md`. Phase 5 started: mod skeleton in `mods/region_trading/` (loader stubs, maga switched off at runtime), first in-game test pending. Personal use for now (the mod would contain modified code from Fireforged Empire and Region Trading Reloaded, publishing needs their authors' permission). The mod may require [TWASE](https://github.com/rfuzzo/twase_macos).
+Status: 2026-10-04, Phases 1–3 done, analysis in `docs/ANALYSIS-region-trading.md`. The in-game test showed no native region diplomacy, so we build our own panel. Phase 4 design agreed in `docs/DESIGN-region-trading.md`. Phase 5 started: mod skeleton in `mods/region_trading/` (loader stubs, maga switched off at runtime, tested). TWASE first for the data the score needs: `twase.faction_attitude` built (TWASE branch `lua-api`), in-game test pending; next region GDP, DB reads, loc. Personal use for now (the mod would contain modified code from Fireforged Empire and Region Trading Reloaded, publishing needs their authors' permission). The mod may require [TWASE](https://github.com/rfuzzo/twase_macos).
 
 ## Goal
 
@@ -68,6 +68,10 @@ Original tasks:
 - `campaigns/main_attila/mods/region_trading/scripting.lua`: never replaces `scripting.lua`, stays compatible with Fireforged
 - Fireforged's built-in version has to be switched off: a small override pack with higher priority for its `maga\script\*` files, or patching it at runtime in Lua (decide after the analysis)
 - loop: loose files in `TotalWarAttilaData/data`, reload from the TWASE console, Lua log, `twase-launch.command --mods … --load <save>`
+
+## Wiki (task for later)
+
+A wiki in this repo with what we've found: the vanilla campaign Lua API (script interfaces and their methods from the Lunar method tables, `game_interface` functions, events), engine internals relevant to modding, and the `twase.*` functions TWASE exposes.
 
 ## Phase 6: packaging and testing
 
