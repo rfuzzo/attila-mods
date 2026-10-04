@@ -95,6 +95,29 @@ function deal.federates(ai_key, budget, slots)
 	return chosen, total;
 end;
 
+-- The player's army that concludes a federate treaty: a general in the region or next to it, most free slots.
+-- -> force, free slots (nil if there's none)
+function deal.negotiating_army(player_key, region_key)
+	local region = rt.world():region_manager():region_by_key(region_key);
+	local near = { [region_key] = true };
+	local adjacent = region:adjacent_region_list();
+	for i = 0, adjacent:num_items() - 1 do near[adjacent:item_at(i):name()] = true end;
+
+	local best, best_free = nil, 0;
+	local forces = rt.world():faction_by_key(player_key):military_force_list();
+	for i = 0, forces:num_items() - 1 do
+		local force = forces:item_at(i);
+		if force:is_army() and force:has_general() then
+			local general = force:general_character();
+			if general:has_region() and near[general:region():name()] then
+				local free = config.army_size - force:unit_list():num_items();
+				if free > best_free then best, best_free = force, free end;
+			end;
+		end;
+	end;
+	return best, best_free;
+end;
+
 -- deal.evaluate(d) -> result
 -- result = { score, band = "low" | "moderate" | "high", accept, price, value, ai_region_value, units, relationship, parts }
 -- The AI accepts at score >= 0, like the game's own deals.
@@ -112,9 +135,19 @@ function deal.evaluate(d)
 		cost = per_turn * config.money_payments_turns;
 		result.price, result.per_turn, result.turns = cost, per_turn, config.money_payments_turns;
 	elseif d.kind == "troops" then
-		local units, units_cost = deal.federates(d.ai, region_value * config.troops_share, d.slots or config.army_size);
-		cost = units_cost;
-		result.price, result.units = cost, units;
+		-- federates join the army of the general who concludes the treaty, in the region or next to it
+		local force, free = deal.negotiating_army(d.player, d.region);
+		if not force then
+			result.unavailable = "needs a general with an army in or next to the region";
+			result.units = {};
+		elseif free == 0 then
+			result.unavailable = "the general's army is full";
+			result.units = {};
+		else
+			local units, units_cost = deal.federates(d.ai, region_value * config.troops_share, free);
+			cost = units_cost;
+			result.price, result.units = cost, units;
+		end;
 	elseif d.kind == "swap" then
 		cost = value.of(d.ai_region, d.ai);
 		result.ai_region_value = cost;
@@ -125,7 +158,7 @@ function deal.evaluate(d)
 	result.relationship, result.relationship_parts = rel, rel_parts;
 
 	result.score = math.floor(gain - cost + rel + 0.5);
-	result.accept = result.score >= 0;
+	result.accept = result.score >= 0 and not result.unavailable;
 	if result.score < -config.band * deal_value then
 		result.band = "low";
 	elseif result.score > config.band * deal_value then
