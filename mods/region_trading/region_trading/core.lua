@@ -31,4 +31,19 @@ function rt.region_wealth(key)
 	return twase.region_wealth(rt.world():region_manager():region_by_key(key));
 end;
 
+-- The province key of a region. nil without TWASE's Lua API.
+function rt.province(key)
+	if not (twase and twase.region_province) then return nil end;
+	return twase.region_province(rt.world():region_manager():region_by_key(key));
+end;
+
+-- Building level and unit records from the loaded DB (game and mods merged). nil without TWASE.
+function rt.building_level(key)
+	return twase and twase.building_level and twase.building_level(key) or nil;
+end;
+
+function rt.unit(key)
+	return twase and twase.unit and twase.unit(key) or nil;
+end;
+
 return rt;

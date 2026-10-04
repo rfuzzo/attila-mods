@@ -45,6 +45,6 @@ rt.cm():register_first_tick_callback(function()
 			table.insert(parts, string.format("%s %d", category, values.total));
 		end;
 		table.sort(parts);
-		rt.log("  %s: wealth %s (%s)", key, tostring(total), table.concat(parts, ", "));
+		rt.log("  %s (%s): wealth %s (%s)", key, tostring(rt.province(key)), tostring(total), table.concat(parts, ", "));
 	end;
 end);
