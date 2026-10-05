@@ -18,6 +18,8 @@ Decided 2026-10-04: regions can also be traded **during a war**, in peace negoti
 
 The Lua panel / execution below stay as the fallback; the MAGA-style map UI is dropped.
 
+**AI valuation (done 2026-10-05):** TWASE adds a region's value to the native deal score as the mirror image of the AI paying that much gold (the evaluator only values gold the AI pays), with the value from `value.lua` via `twase.set_region_value_handler`. Tested: demand 2,000 gold −3.1; Ajax (2,103 to the ERE) alone +3.4; 2,000 + Ajax −1.5; 2,000 + Aquae Sextiae (6,069) +13.1.
+
 ## Decisions
 
 | Topic | Decision |
