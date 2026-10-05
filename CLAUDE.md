@@ -20,6 +20,8 @@ Personal Total War: ATTILA mods and tools for macOS (Apple Silicon, Feral port 1
 
 ## TWASE (script extender, ~/GitHub/twase_macos, released v1.0.0)
 
+- Region trading work in TWASE goes on the branch `region-trading`, checked out as the worktree `~/GitHub/twase_macos-region-trading` (other sessions use `~/GitHub/twase_macos`, don't switch its branch). `xmake -y` there builds and installs into the game.
+
 - Start the game with `<game folder>/twase-launch.command [--skip-launcher] [--mods <Runcher-style mod_list.txt>] [--load "<save>.save"]`. The game ignores process arguments on macOS; the launcher sets Feral's preferences for one launch and links packs from the Workshop into `TotalWarAttilaData/data`. Steam must be running.
 - In-game Lua console: key below Esc. Commands run on the game's Lua thread. Game Lua output goes to the console and `TWASE/logs/` (Lua lines need `logging.level = "debug"` or lower in `TWASE/config.ini`). The global `cm` is nil there: use `get_cm()` (the instance; `campaign_manager` is only the class).
 - Mod loader: every `campaigns/<campaign>/mods/<name>/scripting.lua` is `require`d after the campaign's `scripting.lua`, from loose files in `TotalWarAttilaData/data/` or from a loaded pack. Feral's user `maps` folder is wiped on every launch, don't use it.
