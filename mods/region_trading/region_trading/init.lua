@@ -3,6 +3,7 @@
 local rt = require("region_trading/core");
 local maga = require("region_trading/compat/maga");
 local explain = require("region_trading/explain");
+local governor = require("region_trading/governor");
 local value = require("region_trading/value");
 
 rt.log("version %s loading", rt.version);
@@ -24,6 +25,12 @@ if twase and twase.set_region_value_handler then
 		rt.log("value of %s for %s: %d", region_key, faction_key, gold);
 		return gold;
 	end);
+	if twase.set_region_transfer_handler then
+		twase.set_region_transfer_handler(function(phase, region_key, to)
+			local ok, err = pcall(governor.on_transfer, phase, region_key, to);
+			if not ok then rt.log("transfer handler (%s %s) failed: %s", phase, region_key, tostring(err)) end;
+		end);
+	end;
 end;
 
 -- Smoke test: what the mod will build on, once the game model exists.
