@@ -13,12 +13,14 @@ Decided 2026-10-04: regions can also be traded **during a war**, in peace negoti
 | Fireforged / design | Native deal | What we add |
 |---|---|---|
 | region → gold / instalments | Gift Region + demand Payments | the region's value in the evaluation (TWASE hook; today the deal score gives regions +0.0) |
-| region ↔ region | Gift Region + Demand Region (the AI's regions where your army stands, the engine's horde rule reused) | same |
+| region ↔ region, demand a region | Gift Region + Demand Region (any AI region but its capital and garrisoned settlements; the engine only listed regions where your army stands) | same; the panel allows one ticked region in total, so no swap in one deal yet |
 | region → federates | not native | an option (UI to decide), units after acceptance, their cost in the evaluation |
 
 The Lua panel / execution below stay as the fallback; the MAGA-style map UI is dropped.
 
 **AI valuation (done 2026-10-05):** TWASE adds a region's value to the native deal score as the mirror image of the AI paying that much gold (the evaluator only values gold the AI pays), with the value from `value.lua` via `twase.set_region_value_handler`. Tested: demand 2,000 gold −3.1; Ajax (2,103 to the ERE) alone +3.4; 2,000 + Ajax −1.5; 2,000 + Aquae Sextiae (6,069) +13.1.
+
+**Demand region (done 2026-10-05):** the panel shows both lists side by side; every AI region but its capital and garrisoned settlements can be demanded. Tested (WRE → ERE): Serdica alone −6.2.
 
 ## Decisions
 

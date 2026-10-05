@@ -1,6 +1,6 @@
 # Region trading – plan
 
-Status: 2026-10-04, Phase 5. Direction change: native region deals (TWASE widens the engine's Gift Region, tested end to end) using the native region list (no map UI), see the design. Region value in the native deal evaluation done (tested). Next: demand region, federates, TWASE setting.
+Status: 2026-10-05, Phase 5. Direction change: native region deals (TWASE widens the engine's Gift Region, tested end to end) using the native region list (no map UI), see the design. Region value in the native deal evaluation and demand region done (tested). Next: federates, TWASE setting.
 
 ## Goal
 
