@@ -59,30 +59,10 @@ local function list_rows(list_id)
 end;
 
 local steps = {};
-table.insert(steps, function() log("native region trading: %s", tostring(twase.dev_native_region_trading(true))) end);
 for _, f in ipairs(open_with_ai()) do table.insert(steps, f) end;
-table.insert(steps, function() actions("native"); click("add_offer_button") end);
+table.insert(steps, function() click("add_offer_button") end);
 table.insert(steps, function() click("diplomac_action_possible_6") end);
-table.insert(steps, function()
-	local offers, demands = list_rows("list_offers"), list_rows("list_demands");
-	log("gift region panel: %d offers, %d demands", #offers, #demands);
-	for i, row in ipairs(offers) do if i <= 5 then log("  offer row %s: %s", row:Id(), tostring(row:GetStateText())) end end;
-	log("SHOT panel");
-end);
-table.insert(steps, function()
-	local offers = list_rows("list_offers");
-	if offers[1] then
-		-- tick a region from the middle of the list, not the first (alphabetical) one
-		local row = offers[math.min(5, #offers)];
-		local box = find_id(row, "checkbox", 3);
-		if box then box:SimulateClick() end;
-		log("ticking %s: %s", row:Id(), tostring(row:GetStateText()));
-	end;
-end);
-table.insert(steps, function() click("ok_trade_regions") end);
-table.insert(steps, function() log("SHOT offer") end);
-table.insert(steps, function() click("button_send") end);
-table.insert(steps, function() log("SHOT answer") end);
+table.insert(steps, function() log("SHOT panel") end);
 table.insert(steps, function() log("done") end);
 
 rt.cm():register_first_tick_callback(function()
