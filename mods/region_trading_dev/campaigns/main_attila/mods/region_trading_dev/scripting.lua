@@ -78,7 +78,7 @@ end;
 
 -- "panel": open the native region panel with the AI; "transfer": the deal's transfer, for the minimap (needs
 -- [dev] lua_dev_functions = true in TWASE/config.ini)
-local MODE = "federates";
+local MODE = "garrison";
 
 local steps = {};
 if MODE == "federates" then
@@ -139,7 +139,7 @@ elseif MODE == "garrison" then
 		local forces = rt.world():faction_by_key("att_fact_western_roman_empire"):military_force_list();
 		for i = 0, forces:num_items() - 1 do
 			local f = forces:item_at(i);
-			if f:has_general() and f:general_character():has_region() and f:general_character():region():name():find("savaria") then
+			if f:has_general() and f:general_character():has_region() and f:general_character():region():name():find("eboracum") then
 				local g = f:general_character();
 				local function try(fn) local ok, v = pcall(fn); return ok and tostring(v) or ("err:" .. tostring(v)) end;
 				log("FORCE %d: army %s, garrison_residence %s, units %d, type general %s colonel %s, ap %s, rank %s, politician %s, family %s, faction_leader %s, embedded %s, in_settlement %s, upkeep %s",
@@ -151,6 +151,13 @@ elseif MODE == "garrison" then
 					try(function() return g:in_settlement() end), try(function() return f:upkeep() end));
 			end;
 		end;
+	end);
+	table.insert(steps, function()
+		local region = rt.world():region_manager():region_by_key("att_reg_britannia_inferior_eboracum");
+		local g = region:has_governor() and region:governor();
+		log("GOVERNOR of Eboracum: %s, general %s, colonel %s, has force %s, embedded %s", tostring(g and g:cqi()),
+			tostring(g and g:character_type("general")), tostring(g and g:character_type("colonel")),
+			tostring(g and g:has_military_force()), tostring(g and g:is_embedded_in_military_force()));
 	end);
 elseif MODE == "addunit" then
 	-- add_unit_to_force on the WRE armies in or next to Savaria: their units before and after

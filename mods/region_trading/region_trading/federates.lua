@@ -9,10 +9,12 @@ local federates = {};
 -- running foedera by the AI faction's key (saved with the game, see step 4 of the plan)
 federates.active = {};
 
--- A field army: led by a general. A settlement's garrison is an army too, led by a "colonel" (has_garrison_residence
--- doesn't tell them apart: it's true for any army inside a settlement).
+-- A field army: led by a general and paid for. A settlement's garrison is an army too, led by a "colonel" or by the
+-- province's governor (a general), and costs no upkeep (has_garrison_residence doesn't tell them apart: it's true for
+-- any army inside a settlement). Tested: Savaria's garrison (colonel), Eboracum's (its governor).
 local function is_field_army(force)
-	return force:is_army() and force:has_general() and force:general_character():character_type("general");
+	return force:is_army() and force:has_general() and force:general_character():character_type("general")
+		and force:upkeep() > 0;
 end;
 
 -- Your army that concludes the foedus: a general in one of the ceded regions or next to one, the most free slots.
