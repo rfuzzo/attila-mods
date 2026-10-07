@@ -78,10 +78,32 @@ end;
 
 -- "panel": open the native region panel with the AI; "transfer": the deal's transfer, for the minimap (needs
 -- [dev] lua_dev_functions = true in TWASE/config.ini)
-local MODE = "values";
+local MODE = "federates";
 
 local steps = {};
-if MODE == "values" then
+if MODE == "federates" then
+	-- federates for Salona from a faction without a levy pool (the ERE) and from peoples with one
+	for _, ai in ipairs({ AI, "att_fact_visigothi", "att_fact_alani", "att_fact_franci" }) do
+		table.insert(steps, function()
+			local pool = {};
+			for g, p in pairs(twase.levy_pool(ai) or {}) do table.insert(pool, string.format("%s x%d", p.unit, p.max_count)) end;
+			local offer, reason = region_trading.federates.offer(ai, "att_fact_western_roman_empire", { "att_reg_dalmatia_salona" });
+			log("FEDERATES from %s (pool: %s): %s", ai, table.concat(pool, ", "),
+				offer and string.format("%d units, cost %d of budget %d: %s", #offer.units, offer.cost, offer.budget,
+					table.concat(offer.units, ", ")) or ("none, " .. tostring(reason)));
+		end);
+	end;
+elseif MODE == "db" then
+	-- record layouts of the levy pool tables (needs [dev] lua_dev_functions = true)
+	for _, t in ipairs({ "faction_to_mercenary_set_junctions", "mercenary_pool_to_groups_junctions", "mercenary_unit_groups" }) do
+		table.insert(steps, function()
+			for i = 0, 2 do
+				local fields, count = twase.dev_db_fields(t, i, 0x50);
+				log("DB %s[%d] of %d: %s", t, i, count, tostring(fields));
+			end;
+		end);
+	end;
+elseif MODE == "values" then
 	-- region values as the ERE sees them: WRE regions it would receive, its own it would give (to the WRE)
 	local player = "att_fact_western_roman_empire";
 	for _, region in ipairs({ "att_reg_narbonensis_aquae_sextiae", "att_reg_mediterraneus_occidentalis_ajax", "att_reg_lusitania_olisipo",

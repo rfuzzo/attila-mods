@@ -46,6 +46,12 @@ function rt.unit(key)
 	return twase and twase.unit and twase.unit(key) or nil;
 end;
 
+-- A faction's own levy pool { [group] = { unit, max_count, ... } } (the units of that people others can levy), nil if it
+-- has none or without TWASE.
+function rt.levy_pool(faction_key)
+	return twase and twase.levy_pool and twase.levy_pool(faction_key) or nil;
+end;
+
 -- Localised text of a loc key, nil if missing or without TWASE.
 function rt.localise(key)
 	return twase and twase.localise and twase.localise(key) or nil;

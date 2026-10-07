@@ -35,9 +35,21 @@ local function negotiating_army(player_key, region_keys)
 	return best, best_free;
 end;
 
--- The AI's land unit types (from its armies, no generals' bodyguards), with their recruitment cost, most expensive
--- first. The most expensive quarter of them are its elite.
-local function unit_types(ai_key)
+-- The AI's own levy pool (that people's warriors, the units others levy from it), each type at most its pool count
+local function pool_types(ai_key)
+	local seen, types = {}, {};
+	for _, group in pairs(rt.levy_pool(ai_key) or {}) do
+		local record = group.unit and rt.unit(group.unit);
+		if record and record.recruitment_cost > 0 and not seen[group.unit] then
+			seen[group.unit] = true;
+			table.insert(types, { key = group.unit, cost = record.recruitment_cost, max = group.max_count });
+		end;
+	end;
+	return types;
+end;
+
+-- The AI's land unit types, from its armies (no generals' bodyguards)
+local function army_types(ai_key)
 	local seen, types = {}, {};
 	local forces = rt.world():faction_by_key(ai_key):military_force_list();
 	for i = 0, forces:num_items() - 1 do
@@ -58,6 +70,14 @@ local function unit_types(ai_key)
 			end;
 		end;
 	end;
+	return types;
+end;
+
+-- The unit types the AI gives: its levy pool where it has one, else its army's types. Most expensive first; the most
+-- expensive quarter of them are its elite.
+local function unit_types(ai_key)
+	local types = pool_types(ai_key);
+	if #types == 0 then types = army_types(ai_key) end;
 	table.sort(types, function(a, b) return a.cost > b.cost end);
 	local elite = math.floor(#types * config.federates_elite_share);
 	for i, t in ipairs(types) do t.elite = i <= elite end;
@@ -65,16 +85,18 @@ local function unit_types(ai_key)
 end;
 
 -- Fill the budget, cycling through the AI's unit types so the federates are a mixed force, with at most
--- config.federates_max_elite elite units. -> { unit keys }, total cost
+-- config.federates_max_elite elite units and each type at most its `max` (pool types). -> { unit keys }, total cost
 local function pick_units(types, budget, slots)
-	local chosen, total, elite = {}, 0, 0;
+	local chosen, total, elite, count = {}, 0, 0, {};
 	local added = true;
 	while added and #chosen < slots do
 		added = false;
 		for _, t in ipairs(types) do
-			if #chosen < slots and total + t.cost <= budget and (not t.elite or elite < config.federates_max_elite) then
+			if #chosen < slots and total + t.cost <= budget and (not t.elite or elite < config.federates_max_elite)
+					and (not t.max or (count[t.key] or 0) < t.max) then
 				table.insert(chosen, t.key);
 				total = total + t.cost;
+				count[t.key] = (count[t.key] or 0) + 1;
 				if t.elite then elite = elite + 1 end;
 				added = true;
 			end;
