@@ -63,15 +63,26 @@ army keeps the units). Step 2, a dilemma "pay X gold or refuse", is for v2.
 ## Decisions (2026-10-07)
 
 1. UI: option A, a federates line in the region panel.
-2. When: only in a region swap (see the open point below).
+2. When: when you give regions (land for service); treaties can be in the same deal.
 3. Units: a mix, mostly copies of the AI's own units, at most a few elite ones.
 4. Size: units worth up to 80 % of the ceded regions' value, limited by the army's free slots.
 5. The AI's armies: copies, the AI loses nothing.
 6. Repeated deals: none for now, one foedus per faction at a time.
 7. Loyalty v1: grumbling (morale malus) and uprising.
 
-Open: question 2's answer, "only in a region swap", to confirm (a swap is regions both ways; a foedus was land for
-service, i.e. you give regions and get troops).
+## Implementation plan
+
+1. **Lua, the offer:** for the regions you give, the negotiating army (your general in or next to one of them, most
+   free slots), the units (copies of the AI's land units, a mix with at most a few elite ones) and their cost
+   (budget 80 % of the regions' value for the AI, limited by the free slots). TWASE asks the mod through a handler.
+2. **TWASE, the panel:** a "Federates: N units" row at the top of the demand list (made with the engine's row
+   template, so it ticks like a region), active only when you give regions and a general is there; otherwise it
+   shows why not.
+3. **TWASE, score and deal list:** the units' recruitment cost counts like the AI paying that much gold (the same
+   mirror as regions); the deal list shows "+ federates (N units)" under your demands.
+4. **On acceptance:** after the transfer the mod adds the units to the army (`add_unit_to_force`) and saves the foedus
+   (one per faction at a time).
+5. **Loyalty v1:** grumbling (morale malus bundle) and uprising (`force_rebellion_in_region`).
 
 ## The original questions
 
