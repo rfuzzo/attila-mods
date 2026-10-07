@@ -17,10 +17,10 @@ return {
 	leverage_peace = 0.85,           -- the other side's army stands in the region, at peace (military access)
 
 	-- Federates (federates.lua)
-	federates_share = 0.8,           -- units worth up to this share of the ceded land's value (recruitment cost)
+	federates_share = 0.8,           -- a new army of their units worth up to this share of the ceded land's value (recruitment cost)
 	federates_elite_share = 0.25,    -- the most expensive quarter of the AI's unit types are its elite
 	federates_max_elite = 0,         -- at most this many elite units (none, decided 2026-10-07)
-	army_size = 20,                  -- units per army, the general's bodyguard included
+	army_size = 20,                  -- units per army, the general's bodyguard included (a federate army: up to 19 more)
 
 	-- Willingness to become your federates, in deal score points (docs/DESIGN-federates.md)
 	willingness = {

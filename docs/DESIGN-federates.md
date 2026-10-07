@@ -152,6 +152,13 @@ a troops deal TWASE leaves the game's scores of those two terms out and adds the
    Region", which settles them, but only on regions where their army stands). Settling a horde as federates is the
    classic case (382, 418): should the troops entry also be offered to hordes, with vanilla's rule for which regions?
 
+**Decided 2026-10-07: the warriors always form a new army of yours** (federates fought as their own contingent,
+under their own leaders), spawned at the most valuable ceded region with `cm:create_force` (the game generates the
+general): up to 19 units, worth up to 80 % of the land's value, from their levy pool or copies of their field armies'
+units. No general of yours is needed nearby, and the loyalty can act on that army as a whole. Existing armies aren't
+filled. Going over the army limit is fine (the game allows it). Garrisons (led by a colonel or the governor, no upkeep)
+never count as field armies.
+
 ## Implementation plan
 
 Decided 2026-10-07: a foedus is a native deal: you cede land and demand that the people becomes your **tributary**.

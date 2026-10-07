@@ -17,33 +17,6 @@ local function is_field_army(force)
 		and force:upkeep() > 0;
 end;
 
--- Your army that concludes the foedus: a general in one of the ceded regions or next to one, the most free slots.
--- -> force, free slots (nil if there's none)
-local function negotiating_army(player_key, region_keys)
-	local near = {};
-	local regions = rt.world():region_manager();
-	for _, key in ipairs(region_keys) do
-		near[key] = true;
-		local adjacent = regions:region_by_key(key):adjacent_region_list();
-		for i = 0, adjacent:num_items() - 1 do near[adjacent:item_at(i):name()] = true end;
-	end;
-
-	local best, best_free = nil, 0;
-	local forces = rt.world():faction_by_key(player_key):military_force_list();
-	for i = 0, forces:num_items() - 1 do
-		local force = forces:item_at(i);
-		-- field armies only: a garrison stays with the settlement
-		if is_field_army(force) then
-			local general = force:general_character();
-			if general:has_region() and near[general:region():name()] then
-				local free = config.army_size - force:unit_list():num_items();
-				if not best or free > best_free then best, best_free = force, free end;
-			end;
-		end;
-	end;
-	return best, best_free;
-end;
-
 -- The AI's own levy pool (that people's warriors, the units others levy from it), each type at most its pool count
 local function pool_types(ai_key)
 	local seen, types = {}, {};
@@ -115,31 +88,25 @@ local function pick_units(types, budget, slots)
 end;
 
 -- federates.offer(ai_key, player_key, region_keys) -> offer or nil, short reason, reason
--- What `ai_key` gives as federates for the regions `region_keys` you cede to it:
--- offer = { units = { unit keys }, cost = recruitment cost in gold, force_cqi, general_cqi, value, budget }
+-- What `ai_key` gives as federates for the regions `region_keys` you cede to it: a new army of theirs under your command,
+-- spawned at the most valuable ceded region (federates fought as their own contingent, under their own leaders).
+-- offer = { units = { unit keys }, cost = recruitment cost in gold, spawn_region, value, budget }
 function federates.offer(ai_key, player_key, region_keys)
 	if #region_keys == 0 then return nil, "give land", "Tick land of yours to cede to them." end;
 	if federates.active[ai_key] then return nil, "foedus runs", "A foedus with them is still in force." end;
 
-	local force, free = negotiating_army(player_key, region_keys);
-	if not force then return nil, "no general", "Needs one of your generals with an army in or next to the land you cede." end;
-	if free <= 0 then return nil, "army full", "Your general's army is full." end;
-
-	local land = 0;
-	for _, key in ipairs(region_keys) do land = land + value.of(key, ai_key, player_key) end;
+	local land, spawn_region, best = 0, nil, nil;
+	for _, key in ipairs(region_keys) do
+		local v = value.of(key, ai_key, player_key);
+		land = land + v;
+		if not best or v > best then spawn_region, best = key, v end;
+	end;
 	local budget = math.max(land, 0) * config.federates_share;
 
-	local units, cost = pick_units(unit_types(ai_key), budget, free);
+	local units, cost = pick_units(unit_types(ai_key), budget, config.army_size - 1);
 	if #units == 0 then return nil, "too little", "The land isn't worth any of their units." end;
 
-	return {
-		units = units,
-		cost = cost,
-		force_cqi = force:command_queue_index(),
-		general_cqi = force:general_character():cqi(),
-		value = land,
-		budget = budget,
-	};
+	return { units = units, cost = cost, spawn_region = spawn_region, value = land, budget = budget };
 end;
 
 -- units in a faction's field armies (its land strength; garrisons don't march)
@@ -186,9 +153,20 @@ function federates.willingness(ai_key, player_key)
 	return total, parts;
 end;
 
--- A deal for troops around its transfer: "before" works out the warriors (the land is still yours), "after" adds them
--- to your general's army and records the foedus.
+-- A deal for troops around its transfer: "before" works out the warriors (the land is still yours), "after" spawns
+-- their army under your command and records the foedus.
 local pending = nil;
+
+-- Your new federate army at the settlement of `region_key` (now theirs); the game generates its general and finds a
+-- free spot. The force's home region is your capital, as in the game's own spawn scripts.
+local function spawn(player_key, region_key, units, on_spawned)
+	local world = rt.world();
+	local settlement = world:region_manager():region_by_key(region_key):settlement();
+	local player = world:faction_by_key(player_key);
+	local home = player:has_home_region() and player:home_region():name() or region_key;
+	rt.cm():create_force(player_key, table.concat(units, ","), home, settlement:logical_position_x(),
+		settlement:logical_position_y(), "region_trading_foedus_" .. region_key, true, on_spawned);
+end;
 
 function federates.on_deal(phase, ai_key, player_key, ...)
 	if phase == "before" then
@@ -198,13 +176,13 @@ function federates.on_deal(phase, ai_key, player_key, ...)
 		return;
 	end;
 	if not pending then return end;
-	for _, unit in ipairs(pending.units) do
-		rt.cm():add_unit_to_force(unit, pending.force_cqi);
-	end;
-	federates.active[ai_key] = rt.cm():model():turn_number();
-	rt.log("foedus with %s for %s: %d units to army %d: %s", ai_key, table.concat({ ... }, ", "), #pending.units,
-		pending.force_cqi, table.concat(pending.units, ", "));
+	local offer = pending;
 	pending = nil;
+	federates.active[ai_key] = rt.cm():model():turn_number();
+	spawn(player_key, offer.spawn_region, offer.units, function(cqi)
+		rt.log("foedus with %s: their army (general cqi %s) at %s, %d units: %s", ai_key, tostring(cqi), offer.spawn_region,
+			#offer.units, table.concat(offer.units, ", "));
+	end);
 end;
 
 -- running foedera, saved as "faction:turn;..."

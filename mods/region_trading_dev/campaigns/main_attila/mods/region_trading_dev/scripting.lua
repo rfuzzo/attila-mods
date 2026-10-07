@@ -78,7 +78,7 @@ end;
 
 -- "panel": open the native region panel with the AI; "transfer": the deal's transfer, for the minimap (needs
 -- [dev] lua_dev_functions = true in TWASE/config.ini)
-local MODE = "garrison";
+local MODE = "spawn";
 
 local steps = {};
 if MODE == "federates" then
@@ -133,6 +133,20 @@ elseif MODE == "values" then
 			end;
 		end;
 	end);
+elseif MODE == "spawn" then
+	-- the foedus handler without a deal: Savaria for the Quadi; your field armies before and after
+	local function count()
+		local n, forces = 0, rt.world():faction_by_key("att_fact_western_roman_empire"):military_force_list();
+		for i = 0, forces:num_items() - 1 do if forces:item_at(i):is_army() then n = n + 1 end end;
+		return n;
+	end;
+	table.insert(steps, function()
+		log("SPAWN armies before: %d", count());
+		region_trading.federates.on_deal("before", "att_fact_quadi", "att_fact_western_roman_empire", "att_reg_pannonia_savaria");
+		region_trading.federates.on_deal("after", "att_fact_quadi", "att_fact_western_roman_empire", "att_reg_pannonia_savaria");
+	end);
+	table.insert(steps, function() log("SPAWN armies after: %d", count()) end);
+	table.insert(steps, function() log("SHOT spawn") end);
 elseif MODE == "garrison" then
 	-- what tells a settlement's garrison from a field army inside the settlement
 	table.insert(steps, function()
