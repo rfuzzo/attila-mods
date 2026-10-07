@@ -1,4 +1,4 @@
--- Tuning values of the region value (value.lua), in gold. See docs/DESIGN-region-trading.md.
+-- Tuning values of the region value (value.lua), in gold. See docs/DESIGN-region-value.md.
 
 return {
 	income_turns = 10,               -- value = net income (wealth - building upkeep) x this many turns
