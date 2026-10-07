@@ -1,4 +1,4 @@
-# Federates: regions for troops – design (draft for review, 2026-10-07)
+# Federates: regions for troops – design (2026-10-07)
 
 Fireforged's idea, the part of its region trading the native deals don't cover: you cede a region to a people, and
 they serve you as *foederati*. Nothing here is implemented yet; the questions at the end are what I need decided.
@@ -60,7 +60,20 @@ Consequences, escalating: (1) grumbling, a morale malus on the army; (3) uprisin
 were settled in, and the federate units leave (leaving needs TWASE unit removal; until then the rebels spawn and the
 army keeps the units). Step 2, a dilemma "pay X gold or refuse", is for v2.
 
-## Questions for you
+## Decisions (2026-10-07)
+
+1. UI: option A, a federates line in the region panel.
+2. When: only in a region swap (see the open point below).
+3. Units: a mix, mostly copies of the AI's own units, at most a few elite ones.
+4. Size: units worth up to 80 % of the ceded regions' value, limited by the army's free slots.
+5. The AI's armies: copies, the AI loses nothing.
+6. Repeated deals: none for now, one foedus per faction at a time.
+7. Loyalty v1: grumbling (morale malus) and uprising.
+
+Open: question 2's answer, "only in a region swap", to confirm (a swap is regions both ways; a foedus was land for
+service, i.e. you give regions and get troops).
+
+## The original questions
 
 1. **UI:** option A (a federates line in the region panel)?
 2. **When:** only when you give regions (land for service), or also in a swap or when you add gold?

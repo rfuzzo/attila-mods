@@ -107,7 +107,9 @@ gold, a hostile one refuses unless you overpay.
    check (TWASE task).
 4. **Poor vs rich:** kept, but by GDP only. TWASE rescales the region's amount so the game's economic power is
    computed without the treasury (which a deal earlier in the turn can move): `clamp(GDP / 8,000, 0.2, 4)`.
-5. **Your side:** yes, show what a region is worth to you in the panel (next step).
+5. **Your side:** yes, show what a region is worth to you in the panel (postponed, 2026-10-07).
+6. **Buying regions with gold** stays very expensive (gold the AI receives only counts by size class): option (a),
+   decided 2026-10-07. Buying land outright was rare; revisit after more play.
 
 First numbers (WRE 367, valued by the ERE): Aquae Sextiae 5,069 (was 6,069, enclave burden), Olisipo 494 (enclave,
 unrest 600), Serdica 4,261 (its own, × 1.5), Viminacium 3,240 (its own, a WRE army in it at peace, × 0.85).
