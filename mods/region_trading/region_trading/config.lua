@@ -19,6 +19,6 @@ return {
 	-- Federates (federates.lua)
 	federates_share = 0.8,           -- units worth up to this share of the ceded land's value (recruitment cost)
 	federates_elite_share = 0.25,    -- the most expensive quarter of the AI's unit types are its elite
-	federates_max_elite = 2,         -- at most this many elite units
+	federates_max_elite = 0,         -- at most this many elite units (none, decided 2026-10-07)
 	army_size = 20,                  -- units per army, the general's bodyguard included
 };

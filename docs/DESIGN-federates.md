@@ -64,11 +64,25 @@ army keeps the units). Step 2, a dilemma "pay X gold or refuse", is for v2.
 
 1. UI: option A, a federates line in the region panel.
 2. When: when you give regions (land for service); treaties can be in the same deal.
-3. Units: a mix, mostly copies of the AI's own units, at most a few elite ones.
+3. Units: a mix of the AI's own units, no elite ones (the most expensive quarter of its unit types; changed
+   2026-10-07 after the ERE offered its Scholae).
 4. Size: units worth up to 80 % of the ceded regions' value, limited by the army's free slots.
 5. The AI's armies: copies, the AI loses nothing.
 6. Repeated deals: none for now, one foedus per faction at a time.
 7. Loyalty v1: grumbling (morale malus) and uprising.
+
+## The game's own federates: "Recruit from Horde"
+
+CA modelled foederati as a faction trait (`att_effect_faction_trait_roman_foederati_horde_levy`, effect
+`mercenary_levy_can_recruit_from_local_hordes`: "Can levy units from friendly hordes passing through Roman
+territory"; vanilla Romans only, Fireforged gives it to almost every culture). An army in your territory next to a
+friendly **horde** can hire units from that people's own mercenary pool (`faction_to_mercenary_set_junctions`: 15
+peoples, e.g. the Alans' Agathyrsi warriors and Sarmatian cataphracts), for gold, limited and slowly replenishing.
+The recruitment panel offers it when one of its sources is a horde faction (`0x1034676c8`, horde check
+`0x101b521ec`). Once a people is settled, it stops.
+
+Vanilla's "Gift Region" to a horde is the settlement of a people on your land (the 382 / 418 foedera); after it, the
+levy ends. That's where our federates can continue CA's idea.
 
 ## Implementation plan
 
