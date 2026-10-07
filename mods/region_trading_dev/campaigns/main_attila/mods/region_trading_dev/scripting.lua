@@ -160,6 +160,7 @@ elseif MODE == "actions" then
 	table.insert(steps, function() click("diplomac_action_possible_12") end);
 	table.insert(steps, function() click("add_offer_button") end);
 	table.insert(steps, function() list_actions("after peace") end);
+	table.insert(steps, function() log("ACTIONS type:side:available:blocked %s", tostring(twase.dev_diplomacy_actions())) end);
 	table.insert(steps, function() log("SHOT deal") end);
 elseif MODE == "troops" then
 	for _, f in ipairs(open_with_ai()) do table.insert(steps, f) end;
