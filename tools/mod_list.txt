@@ -3,3 +3,4 @@ mod "loyalty_penalty_from_offices_fixed.pack";
 mod "@Fireforged-Empire_1.pack";
 mod "@Fireforged-Empire_2.pack";
 mod "@Fireforged-Empire_ballast.pack";
+mod "region_trading_ui.pack";

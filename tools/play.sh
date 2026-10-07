@@ -1,6 +1,6 @@
 #!/bin/zsh
 # Start the game with TWASE straight into the main menu or a save, without Feral's launcher (the dev loop).
-# Deploys the region trading mod first, so the game runs the repo's current Lua. The mods come from tools/mod_list.txt
+# Deploys the region trading mod first (loose Lua) and its UI pack, so the game runs the repo's current files. The mods come from tools/mod_list.txt
 # (Feral, started without its launcher, sometimes enables none, and a modded save then crashes on load).
 # usage: tools/play.sh [--no-deploy] [--feral-mods] [--latest | --load <save name>]
 #   --latest       load the newest campaign save
@@ -42,7 +42,10 @@ if [[ -d "$game/TotalWarAttilaData/data/campaigns/main_attila/mods/region_tradin
   echo "warning: the dev harness is deployed and will click through the UI (tools/deploy.sh --remove region_trading_dev)" >&2
 fi
 
-$deploy && $repo/tools/deploy.sh region_trading
+if $deploy; then
+  $repo/tools/deploy.sh region_trading
+  $repo/tools/deploy.sh region_trading_ui
+fi
 
 args=(--skip-launcher)
 $feral_mods || args+=(--mods "$repo/tools/mod_list.txt")

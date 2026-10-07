@@ -68,7 +68,8 @@ scale are interpolated. Details and open proposals: [the region value](DESIGN-re
 - **Deal list:** each column shows its own regions. The X removes the whole region term (one action in the engine);
   to drop one side, reopen the panel and untick it.
 - **Likelihood:** the game's, with the deal score in the tooltip (TWASE's existing tweak).
-- **Open:** the demand list lacks the offers list's background (vanilla layout, fix in our pack), the names.
+- **Layout:** the demand list lacked the offers list's background (vanilla's `list_clip` has no image, and its `list_box` background is transparent, `ffffff00`). Fixed in `mods/region_trading_ui/ui/campaign ui/diplomacy_hud.uic.yml` (the vanilla layout as text, see [UI-FORMAT](UI-FORMAT.md); the diff against `twpack ui export` of the vanilla file is the 12 lines that add the parchment row image to `list_demands/list_clip`). Loose layout files are ignored by the game (tested), so it ships as a pack: `region_trading_ui.pack`, built by `tools/deploy.sh region_trading_ui` (marker file `.build-pack`) and listed in `tools/mod_list.txt`.
+- **Open:** the names ("Gift Region" is loc text).
 
 ## Execution
 
