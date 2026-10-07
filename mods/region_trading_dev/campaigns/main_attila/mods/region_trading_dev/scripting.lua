@@ -67,6 +67,19 @@ if MODE == "panel" then
 	table.insert(steps, function() click("add_offer_button") end);
 	table.insert(steps, function() click("diplomac_action_possible_6") end);
 	table.insert(steps, function() log("SHOT panel") end);
+	-- tick the first row of each list, untick the first again
+	local function click_first(list)
+		local l = find_id(kit.root(), list);
+		local c = l and find_id(l, "checkbox");
+		log("click first checkbox of %s: %s", list, tostring(c ~= nil));
+		if c then c:SimulateClick() end;
+	end;
+	table.insert(steps, function() click_first("list_offers") end);
+	table.insert(steps, function() log("SHOT tick1") end);
+	table.insert(steps, function() click_first("list_demands") end);
+	table.insert(steps, function() log("SHOT tick2") end);
+	table.insert(steps, function() click_first("list_offers") end);
+	table.insert(steps, function() log("SHOT untick1") end);
 else
 	-- the region deal's transfer with flag 0 (as the deal calls it), then with flag 1 (as transfer_region_to_faction)
 	local function transfer(region, flag)
