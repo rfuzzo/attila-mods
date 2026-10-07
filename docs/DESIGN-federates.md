@@ -92,16 +92,19 @@ puppet state" and "Recruit from Horde"; effects like `mercenary_levy_units_per_r
 from vassals" trait) and `att_effect_force_all_campaign_recruitment_cost_vassal_levy` tune it, and the Western Roman
 Empire has an edict `att_edict_western_rome_levy_foederati`. Tributary and puppet status are native deal terms, so a
 foedus can be: cede land + "become our tributary" in one native deal; the game then provides the ongoing levy and the
-relationship (including its tendency to break away). To decide (2026-10-07).
+relationship (including its tendency to break away). **Decided 2026-10-07: a foedus is native, land +
+tributary in one deal**; our free contingent comes on top.
 
 ## Implementation plan
 
-Decided 2026-10-07: a free **contingent** when the deal is made, then an ongoing **levy** while the foedus lasts.
+Decided 2026-10-07: a foedus is a native deal: you cede land and demand that the people becomes your **tributary**.
+The game then provides the ongoing levy ("Levy from tributary") and the relationship. On top, a free **contingent**
+of their warriors when the deal is made.
 
 1. **Lua, the offer:** for the regions you give, the negotiating army (your general in or next to one of them, most
    free slots), the units and their cost (budget 80 % of the regions' value for the AI, limited by the free slots).
-   Units: that people's own pool units (`faction_to_mercenary_set_junctions`, through a TWASE DB getter) where it has
-   a pool, else copies of its land units; no elite ones. Done for the copies.
+   Units: that people's own levy pool units (`faction_to_mercenary_set_junctions`, through a TWASE DB getter) where it
+   has one, else copies of its land units; no elite ones. Done for the copies.
 2. **TWASE, the panel:** a "Federates: N units" row at the top of the demand list (made with the engine's row
    template, so it ticks like a region), active only when you give regions and a general is there; otherwise it
    shows why not.
@@ -109,10 +112,10 @@ Decided 2026-10-07: a free **contingent** when the deal is made, then an ongoing
    mirror as regions); the deal list shows "+ federates (N units)" under your demands.
 4. **On acceptance:** after the transfer the mod adds the units to the army (`add_unit_to_force`) and saves the foedus
    (one per faction at a time).
-5. **The levy:** while the foedus lasts, your armies in or next to the ceded land can levy from that people's pool
-   like from a friendly horde (TWASE: the recruitment sources count a foedus partner like a horde).
-6. **Loyalty v1:** grumbling (morale malus bundle) and uprising (`force_rebellion_in_region`); an uprising ends the
-   foedus and the levy.
+5. **Loyalty:** only if the native tributary relationship isn't enough (it already breaks away on its own).
+
+To check in play: the AI's answer to land + tributary, and where "Levy from tributary" becomes available (in the
+tributary's regions with your army there?).
 
 ## The original questions
 
