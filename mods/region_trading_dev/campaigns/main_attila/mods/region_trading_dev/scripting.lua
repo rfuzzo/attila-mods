@@ -78,7 +78,7 @@ end;
 
 -- "panel": open the native region panel with the AI; "transfer": the deal's transfer, for the minimap (needs
 -- [dev] lua_dev_functions = true in TWASE/config.ini)
-local MODE = "troops";
+local MODE = "actions";
 
 local steps = {};
 if MODE == "federates" then
@@ -131,6 +131,19 @@ elseif MODE == "values" then
 				local r = f:general_character():region();
 				log("ARMY in %s (owner %s)", r:name(), r:owning_faction():name());
 			end;
+		end;
+	end);
+elseif MODE == "actions" then
+	-- the Add Offer/Demand buttons: their ids (type numbers) and labels
+	for _, f in ipairs(open_with_ai()) do table.insert(steps, f) end;
+	table.insert(steps, function() click("add_offer_button") end);
+	table.insert(steps, function()
+		local gift = find_id(kit.root(), "diplomac_action_possible_6");
+		local parent = gift and UIComponent(gift:Parent());
+		for i = 0, (parent and parent:ChildCount() or 0) - 1 do
+			local child = UIComponent(parent:Find(i));
+			local label = child:Find("row_tx");
+			log("ACTION %s = %s", child:Id(), label and UIComponent(label):GetStateText() or "?");
 		end;
 	end);
 elseif MODE == "troops" then
