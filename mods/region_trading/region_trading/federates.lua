@@ -9,6 +9,12 @@ local federates = {};
 -- running foedera by the AI faction's key (saved with the game, see step 4 of the plan)
 federates.active = {};
 
+-- A field army: led by a general. A settlement's garrison is an army too, led by a "colonel" (has_garrison_residence
+-- doesn't tell them apart: it's true for any army inside a settlement).
+local function is_field_army(force)
+	return force:is_army() and force:has_general() and force:general_character():character_type("general");
+end;
+
 -- Your army that concludes the foedus: a general in one of the ceded regions or next to one, the most free slots.
 -- -> force, free slots (nil if there's none)
 local function negotiating_army(player_key, region_keys)
@@ -24,7 +30,8 @@ local function negotiating_army(player_key, region_keys)
 	local forces = rt.world():faction_by_key(player_key):military_force_list();
 	for i = 0, forces:num_items() - 1 do
 		local force = forces:item_at(i);
-		if force:is_army() and force:has_general() then
+		-- field armies only: a garrison stays with the settlement
+		if is_field_army(force) then
 			local general = force:general_character();
 			if general:has_region() and near[general:region():name()] then
 				local free = config.army_size - force:unit_list():num_items();
@@ -48,13 +55,13 @@ local function pool_types(ai_key)
 	return types;
 end;
 
--- The AI's land unit types, from its armies (no generals' bodyguards)
+-- The AI's land unit types, from its field armies (no garrisons, no generals' bodyguards)
 local function army_types(ai_key)
 	local seen, types = {}, {};
 	local forces = rt.world():faction_by_key(ai_key):military_force_list();
 	for i = 0, forces:num_items() - 1 do
 		local force = forces:item_at(i);
-		if force:is_army() then
+		if is_field_army(force) then
 			local units = force:unit_list();
 			for j = 0, units:num_items() - 1 do
 				local unit = units:item_at(j);
@@ -133,13 +140,13 @@ function federates.offer(ai_key, player_key, region_keys)
 	};
 end;
 
--- units in a faction's armies (its land strength)
+-- units in a faction's field armies (its land strength; garrisons don't march)
 local function strength(faction)
 	local units = 0;
 	local forces = faction:military_force_list();
 	for i = 0, forces:num_items() - 1 do
 		local force = forces:item_at(i);
-		if force:is_army() then units = units + force:unit_list():num_items() end;
+		if is_field_army(force) then units = units + force:unit_list():num_items() end;
 	end;
 	return units;
 end;

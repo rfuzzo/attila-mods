@@ -78,18 +78,18 @@ end;
 
 -- "panel": open the native region panel with the AI; "transfer": the deal's transfer, for the minimap (needs
 -- [dev] lua_dev_functions = true in TWASE/config.ini)
-local MODE = "actions";
+local MODE = "federates";
 
 local steps = {};
 if MODE == "federates" then
 	-- federates for Salona from a faction without a levy pool (the ERE) and from peoples with one
-	for _, ai in ipairs({ AI, "att_fact_visigothi", "att_fact_alani", "att_fact_franci" }) do
+	for _, ai in ipairs({ "att_fact_quadi", "att_fact_visigothi" }) do
 		table.insert(steps, function()
 			local pool = {};
 			for g, p in pairs(twase.levy_pool(ai) or {}) do table.insert(pool, string.format("%s x%d", p.unit, p.max_count)) end;
-			local offer, reason = region_trading.federates.offer(ai, "att_fact_western_roman_empire", { "att_reg_dalmatia_salona" });
+			local offer, _, reason = region_trading.federates.offer(ai, "att_fact_western_roman_empire", { "att_reg_pannonia_savaria" });
 			log("FEDERATES from %s (pool: %s): %s", ai, table.concat(pool, ", "),
-				offer and string.format("%d units, cost %d of budget %d: %s", #offer.units, offer.cost, offer.budget,
+				offer and string.format("army %d, %d units, cost %d of budget %d: %s", offer.force_cqi, #offer.units, offer.cost, offer.budget,
 					table.concat(offer.units, ", ")) or ("none, " .. tostring(reason)));
 		end);
 	end;
@@ -131,6 +131,51 @@ elseif MODE == "values" then
 				local r = f:general_character():region();
 				log("ARMY in %s (owner %s)", r:name(), r:owning_faction():name());
 			end;
+		end;
+	end);
+elseif MODE == "garrison" then
+	-- what tells a settlement's garrison from a field army inside the settlement
+	table.insert(steps, function()
+		local forces = rt.world():faction_by_key("att_fact_western_roman_empire"):military_force_list();
+		for i = 0, forces:num_items() - 1 do
+			local f = forces:item_at(i);
+			if f:has_general() and f:general_character():has_region() and f:general_character():region():name():find("savaria") then
+				local g = f:general_character();
+				local function try(fn) local ok, v = pcall(fn); return ok and tostring(v) or ("err:" .. tostring(v)) end;
+				log("FORCE %d: army %s, garrison_residence %s, units %d, type general %s colonel %s, ap %s, rank %s, politician %s, family %s, faction_leader %s, embedded %s, in_settlement %s, upkeep %s",
+					f:command_queue_index(), tostring(f:is_army()), tostring(f:has_garrison_residence()), f:unit_list():num_items(),
+					try(function() return g:character_type("general") end), try(function() return g:character_type("colonel") end),
+					try(function() return g:action_points_per_turn() end), try(function() return g:rank() end),
+					try(function() return g:is_politician() end), try(function() return g:family_member() end),
+					try(function() return g:is_faction_leader() end), try(function() return g:is_embedded_in_military_force() end),
+					try(function() return g:in_settlement() end), try(function() return f:upkeep() end));
+			end;
+		end;
+	end);
+elseif MODE == "addunit" then
+	-- add_unit_to_force on the WRE armies in or next to Savaria: their units before and after
+	local function armies()
+		local out = {};
+		local forces = rt.world():faction_by_key("att_fact_western_roman_empire"):military_force_list();
+		for i = 0, forces:num_items() - 1 do
+			local f = forces:item_at(i);
+			if f:is_army() and f:has_general() and f:general_character():has_region() then
+				local r = f:general_character():region():name();
+				if r:find("pannonia") or r:find("savaria") then table.insert(out, f) end;
+			end;
+		end;
+		return out;
+	end;
+	table.insert(steps, function()
+		for _, f in ipairs(armies()) do
+			log("ARMY %d in %s: %d units", f:command_queue_index(), f:general_character():region():name(), f:unit_list():num_items());
+			rt.cm():add_unit_to_force("rex_germ_band_defenders_sueb", f:command_queue_index());
+			rt.cm():add_unit_to_force("att_rom_comitatensis_spears", f:command_queue_index());
+		end;
+	end);
+	table.insert(steps, function()
+		for _, f in ipairs(armies()) do
+			log("ARMY %d after: %d units", f:command_queue_index(), f:unit_list():num_items());
 		end;
 	end);
 elseif MODE == "willingness" then
