@@ -58,11 +58,28 @@ local function list_rows(list_id)
 	return rows;
 end;
 
+-- "panel": open the native region panel with the AI; "transfer": a scripted transfer, for the minimap
+local MODE = "panel";
+
 local steps = {};
-for _, f in ipairs(open_with_ai()) do table.insert(steps, f) end;
-table.insert(steps, function() click("add_offer_button") end);
-table.insert(steps, function() click("diplomac_action_possible_6") end);
-table.insert(steps, function() log("SHOT panel") end);
+if MODE == "panel" then
+	for _, f in ipairs(open_with_ai()) do table.insert(steps, f) end;
+	table.insert(steps, function() click("add_offer_button") end);
+	table.insert(steps, function() click("diplomac_action_possible_6") end);
+	table.insert(steps, function() log("SHOT panel") end);
+else
+	-- the region deal's transfer with flag 0 (as the deal calls it), then with flag 1 (as transfer_region_to_faction)
+	local function transfer(region, flag)
+		local world = rt.world();
+		twase.dev_transfer_region(world:region_manager():region_by_key(region), world:faction_by_key(AI), flag);
+		log("transferred %s to %s with flag %d", region, AI, flag);
+	end;
+	table.insert(steps, function() log("SHOT before") end);
+	table.insert(steps, function() transfer(REGION, 0) end);
+	table.insert(steps, function() log("SHOT flag0") end);
+	table.insert(steps, function() transfer("att_reg_narbonensis_aquae_sextiae", 1) end);
+	table.insert(steps, function() log("SHOT flag1") end);
+end;
 table.insert(steps, function() log("done") end);
 
 rt.cm():register_first_tick_callback(function()
