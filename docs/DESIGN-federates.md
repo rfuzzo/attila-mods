@@ -134,6 +134,11 @@ Questions:
    troops term imply it (the deal makes them your tributary), or stay a separate native term you add (and the AI
    scores natively)?
 4. The numbers as a start?
+Answers (2026-10-07): (1) Roman and Eastern factions are just unwilling (−30), no exclusion. (4) Hordes: yes, the
+troops entry replaces vanilla's "Gift Region" for hordes (settling a people as federates). (5) The numbers as a
+start, to tune in play. (2, 3) open: ceding land is a big step for the player too; it's realistically tied to a
+peace or a tributary relationship.
+
 5. Hordes: the "Region for Troops" entry only appears for settled factions today (hordes keep vanilla's "Gift
    Region", which settles them, but only on regions where their army stands). Settling a horde as federates is the
    classic case (382, 418): should the troops entry also be offered to hordes, with vanilla's rule for which regions?
