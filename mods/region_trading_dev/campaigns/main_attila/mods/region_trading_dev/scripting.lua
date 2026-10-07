@@ -88,6 +88,18 @@ if MODE == "values" then
 			"att_reg_dardania_serdica", "att_reg_dardania_viminacium", "att_reg_palaestinea_aila" }) do
 		table.insert(steps, function() log("VALUE %s", region_trading.explain(region, AI, player)) end);
 	end;
+	-- federates the ERE would give for land the WRE cedes
+	for _, regions in ipairs({ { "att_reg_dalmatia_salona" }, { "att_reg_lusitania_olisipo" }, { "att_reg_dalmatia_salona", "att_reg_narbonensis_aquae_sextiae" } }) do
+		table.insert(steps, function()
+			local offer, reason = region_trading.federates.offer(AI, player, regions);
+			if not offer then
+				log("FEDERATES for %s: none, %s", table.concat(regions, " + "), reason);
+			else
+				log("FEDERATES for %s: %d units, cost %d of budget %d (land %d), army %d: %s", table.concat(regions, " + "),
+					#offer.units, offer.cost, offer.budget, offer.value, offer.force_cqi, table.concat(offer.units, ", "));
+			end;
+		end);
+	end;
 	-- every WRE region the WRE has an army in, valued by the WRE as owner against the ERE (leverage: none expected)
 	table.insert(steps, function()
 		local forces = rt.world():faction_by_key(player):military_force_list();

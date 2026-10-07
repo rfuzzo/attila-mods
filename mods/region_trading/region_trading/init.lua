@@ -3,6 +3,7 @@
 local rt = require("region_trading/core");
 local maga = require("region_trading/compat/maga");
 local explain = require("region_trading/explain");
+local federates = require("region_trading/federates");
 local governor = require("region_trading/governor");
 local value = require("region_trading/value");
 
@@ -10,8 +11,9 @@ rt.log("version %s loading", rt.version);
 
 maga.disable();
 
--- For the console: region_trading.explain(region_key[, faction_key]), region_trading.value.of(region_key, faction_key)
-region_trading = { explain = explain, rt = rt, value = value };
+-- For the console: region_trading.explain(region_key[, faction_key[, other_key]]),
+-- region_trading.value.of(region_key, faction_key, other_key), region_trading.federates.offer(ai_key, player_key, { region_keys })
+region_trading = { explain = explain, federates = federates, rt = rt, value = value };
 
 -- The engine's region deals (its "Gift Region", widened by TWASE): the AI values a region like this much gold, and
 -- governors survive the transfer of their province capital.
