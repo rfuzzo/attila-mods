@@ -78,7 +78,7 @@ end;
 
 -- "panel": open the native region panel with the AI; "transfer": the deal's transfer, for the minimap (needs
 -- [dev] lua_dev_functions = true in TWASE/config.ini)
-local MODE = "federates";
+local MODE = "panel";
 
 local steps = {};
 if MODE == "federates" then

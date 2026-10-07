@@ -105,23 +105,23 @@ local function pick_units(types, budget, slots)
 	return chosen, total;
 end;
 
--- federates.offer(ai_key, player_key, region_keys) -> offer or nil, reason
+-- federates.offer(ai_key, player_key, region_keys) -> offer or nil, short reason, reason
 -- What `ai_key` gives as federates for the regions `region_keys` you cede to it:
 -- offer = { units = { unit keys }, cost = recruitment cost in gold, force_cqi, general_cqi, value, budget }
 function federates.offer(ai_key, player_key, region_keys)
-	if #region_keys == 0 then return nil, "cede land to them first" end;
-	if federates.active[ai_key] then return nil, "a foedus with them is still in force" end;
+	if #region_keys == 0 then return nil, "give land", "Federates: tick land of yours to cede to them first." end;
+	if federates.active[ai_key] then return nil, "foedus runs", "Federates: a foedus with them is still in force." end;
 
 	local force, free = negotiating_army(player_key, region_keys);
-	if not force then return nil, "needs one of your generals with an army in or next to the land" end;
-	if free <= 0 then return nil, "your general's army is full" end;
+	if not force then return nil, "no general", "Federates: needs one of your generals with an army in or next to the land you cede." end;
+	if free <= 0 then return nil, "army full", "Federates: your general's army is full." end;
 
 	local land = 0;
 	for _, key in ipairs(region_keys) do land = land + value.of(key, ai_key, player_key) end;
 	local budget = math.max(land, 0) * config.federates_share;
 
 	local units, cost = pick_units(unit_types(ai_key), budget, free);
-	if #units == 0 then return nil, "the land isn't worth any of their units" end;
+	if #units == 0 then return nil, "too little", "Federates: the land isn't worth any of their units." end;
 
 	return {
 		units = units,
