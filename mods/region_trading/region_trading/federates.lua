@@ -133,4 +133,83 @@ function federates.offer(ai_key, player_key, region_keys)
 	};
 end;
 
+-- units in a faction's armies (its land strength)
+local function strength(faction)
+	local units = 0;
+	local forces = faction:military_force_list();
+	for i = 0, forces:num_items() - 1 do
+		local force = forces:item_at(i);
+		if force:is_army() then units = units + force:unit_list():num_items() end;
+	end;
+	return units;
+end;
+
+-- federates.willingness(ai_key, player_key) -> points, parts
+-- How willing `ai_key` is to become `player_key`'s federates, in the game's deal score points (±4 is the likelihood
+-- band). Peoples under pressure facing a stronger partner accept; states don't. See docs/DESIGN-federates.md.
+function federates.willingness(ai_key, player_key)
+	local world = rt.world();
+	local ai, player = world:faction_by_key(ai_key), world:faction_by_key(player_key);
+	local w = config.willingness;
+	local parts, total = {}, 0;
+	local function add(name, points) if points ~= 0 then parts[name] = points; total = total + points end end;
+
+	local culture = ai:culture();
+	if culture == "att_cult_roman" or culture == "att_cult_eastern" then add("a state", w.state) end;
+	if ai:is_horde() then
+		add("landless", w.horde);
+	else
+		local regions = ai:region_list():num_items();
+		add("land", regions <= 2 and w.little_land or (regions <= 5 and 0 or w.much_land));
+	end;
+	if ai:has_food_shortage() then add("hungry", w.hungry) end;
+	if ai:losing_money() then add("broke", w.broke) end;
+
+	local theirs = math.max(strength(ai), 1);
+	local ratio = strength(player) / theirs;
+	add("strength", ratio >= 3 and w.far_stronger or (ratio >= 1.5 and w.stronger or (ratio < 1 and w.weaker or 0)));
+	if ai:at_war_with(player) then add("war", ratio >= 3 and w.war_far_stronger or w.war) end;
+
+	local attitude = rt.attitude(ai_key, player_key);
+	if attitude then add("attitude", math.max(-w.attitude_cap, math.min(w.attitude_cap, attitude / w.attitude_per_point))) end;
+	if ai:allied_with(player) then add("allied", w.allied) end;
+	parts.strength_ratio = ratio;
+	return total, parts;
+end;
+
+-- A deal for troops around its transfer: "before" works out the warriors (the land is still yours), "after" adds them
+-- to your general's army and records the foedus.
+local pending = nil;
+
+function federates.on_deal(phase, ai_key, player_key, ...)
+	if phase == "before" then
+		local offer, _, reason = federates.offer(ai_key, player_key, { ... });
+		pending = offer;
+		if not pending then rt.log("foedus with %s: no warriors (%s)", ai_key, tostring(reason)) end;
+		return;
+	end;
+	if not pending then return end;
+	for _, unit in ipairs(pending.units) do
+		rt.cm():add_unit_to_force(unit, pending.force_cqi);
+	end;
+	federates.active[ai_key] = rt.cm():model():turn_number();
+	rt.log("foedus with %s for %s: %d units to army %d: %s", ai_key, table.concat({ ... }, ", "), #pending.units,
+		pending.force_cqi, table.concat(pending.units, ", "));
+	pending = nil;
+end;
+
+-- running foedera, saved as "faction:turn;..."
+rt.cm():register_saving_game_callback(function(context)
+	local entries = {};
+	for faction, turn in pairs(federates.active) do table.insert(entries, faction .. ":" .. turn) end;
+	rt.cm():save_value("RegionTrading_foedera", table.concat(entries, ";"), context);
+end);
+
+rt.cm():register_loading_game_callback(function(context)
+	federates.active = {};
+	for faction, turn in string.gmatch(rt.cm():load_value("RegionTrading_foedera", "", context), "([^:;]+):(%d+)") do
+		federates.active[faction] = tonumber(turn);
+	end;
+end);
+
 return federates;

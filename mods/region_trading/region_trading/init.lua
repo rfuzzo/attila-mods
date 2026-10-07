@@ -46,6 +46,23 @@ local handlers = {
 		rt.log("federates from %s for %s: %s", ai_key, table.concat({ ... }, ", "), table.concat(offer.units, ", "));
 		return #offer.units, offer.cost, nil, table.concat(names, "\n");
 	end,
+	-- a deal for troops: the AI's willingness to become your federates (score points), and the deal's transfer
+	willingness = function(ai_key, player_key)
+		local ok, points, parts = pcall(federates.willingness, ai_key, player_key);
+		if not ok then
+			rt.log("willingness of %s failed: %s", tostring(ai_key), tostring(points));
+			return 0;
+		end;
+		local out = {};
+		for k, v in pairs(parts) do table.insert(out, string.format("%s %.1f", k, v)) end;
+		table.sort(out);
+		rt.log("willingness of %s to serve %s: %+.1f (%s)", ai_key, player_key, points, table.concat(out, ", "));
+		return points;
+	end,
+	foedus = function(phase, ai_key, player_key, ...)
+		local ok, err = pcall(federates.on_deal, phase, ai_key, player_key, ...);
+		if not ok then rt.log("foedus %s with %s failed: %s", phase, tostring(ai_key), tostring(err)) end;
+	end,
 };
 if twase and twase.enable_region_trading then
 	twase.enable_region_trading(handlers);

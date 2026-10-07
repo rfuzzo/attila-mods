@@ -21,4 +21,22 @@ return {
 	federates_elite_share = 0.25,    -- the most expensive quarter of the AI's unit types are its elite
 	federates_max_elite = 0,         -- at most this many elite units (none, decided 2026-10-07)
 	army_size = 20,                  -- units per army, the general's bodyguard included
+
+	-- Willingness to become your federates, in deal score points (docs/DESIGN-federates.md)
+	willingness = {
+		state = -30,                 -- Roman or Eastern culture: a state, not a people
+		horde = 8,                   -- landless
+		little_land = 4,             -- 1-2 regions (3-5: 0)
+		much_land = -4,              -- more than 5 regions
+		hungry = 4,                  -- food shortage
+		broke = 2,                   -- losing money
+		far_stronger = 4,            -- your armies at least 3x theirs
+		stronger = 2,                -- at least 1.5x
+		weaker = -6,                 -- below theirs
+		war_far_stronger = 2,        -- at war with you, you're far stronger: a peace settlement
+		war = -6,                    -- at war otherwise: unbeaten enemies refuse
+		attitude_per_point = 25,     -- attitude / this, at most +/- attitude_cap
+		attitude_cap = 4,
+		allied = 2,
+	},
 };

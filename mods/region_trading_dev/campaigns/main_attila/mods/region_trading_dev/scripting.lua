@@ -27,7 +27,7 @@ rt.cm():add_listener("RegionTradingDev_Timer", "TimeTrigger", true, function(con
 	end;
 end, true);
 
-local AI = "att_fact_eastern_roman_empire";
+local AI = "att_fact_quadi"; -- the partner (the ERE for most tests)
 local REGION = "att_reg_lusitania_olisipo";
 
 local function log(fmt, ...) rt.log("TEST " .. fmt, ...) end;
@@ -78,7 +78,7 @@ end;
 
 -- "panel": open the native region panel with the AI; "transfer": the deal's transfer, for the minimap (needs
 -- [dev] lua_dev_functions = true in TWASE/config.ini)
-local MODE = "actions";
+local MODE = "willingness";
 
 local steps = {};
 if MODE == "federates" then
@@ -133,6 +133,16 @@ elseif MODE == "values" then
 			end;
 		end;
 	end);
+elseif MODE == "willingness" then
+	for _, ai in ipairs({ "att_fact_eastern_roman_empire", "att_fact_quadi", "att_fact_visigothi", "att_fact_alani", "att_fact_franci" }) do
+		table.insert(steps, function()
+			local points, parts = region_trading.federates.willingness(ai, "att_fact_western_roman_empire");
+			local out = {};
+			for k, v in pairs(parts) do table.insert(out, string.format("%s %.1f", k, v)) end;
+			table.sort(out);
+			log("WILLINGNESS %s: %+.1f (%s)", ai, points, table.concat(out, ", "));
+		end);
+	end;
 elseif MODE == "actions" then
 	-- the Add Offer/Demand buttons: their ids (type numbers) and labels
 	for _, f in ipairs(open_with_ai()) do table.insert(steps, f) end;
