@@ -121,7 +121,7 @@ likelihood band), instead of a cost for the units. The land itself is valued as 
 | attitude towards you | ± attitude / 25, at most ± 4 | `twase.faction_attitude` |
 | allied with you | +2 | `allied_with()` |
 
-Examples: the Visigoths as a horde at war with a far stronger Rome, hungry: 8 + 4 + 4 + 2 + attitude ≈ +16, they
+Examples: the Visigoths as a horde at war with a far stronger Rome, hungry: 8 + 4 + 4 + 2 + attitude ≈ +18, they
 accept even a poor strip of land. The Franks with 4 regions, at peace, Rome 2× stronger: 0 + 2 + attitude ≈ +2,
 they want good land. The ERE: −30, never.
 
@@ -134,6 +134,9 @@ Questions:
    troops term imply it (the deal makes them your tributary), or stay a separate native term you add (and the AI
    scores natively)?
 4. The numbers as a start?
+5. Hordes: the "Region for Troops" entry only appears for settled factions today (hordes keep vanilla's "Gift
+   Region", which settles them, but only on regions where their army stands). Settling a horde as federates is the
+   classic case (382, 418): should the troops entry also be offered to hordes, with vanilla's rule for which regions?
 
 ## Implementation plan
 
