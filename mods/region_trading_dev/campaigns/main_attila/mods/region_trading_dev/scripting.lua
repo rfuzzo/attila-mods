@@ -78,7 +78,7 @@ end;
 
 -- "panel": open the native region panel with the AI; "transfer": the deal's transfer, for the minimap (needs
 -- [dev] lua_dev_functions = true in TWASE/config.ini)
-local MODE = "panel";
+local MODE = "troops";
 
 local steps = {};
 if MODE == "federates" then
@@ -133,6 +133,29 @@ elseif MODE == "values" then
 			end;
 		end;
 	end);
+elseif MODE == "troops" then
+	for _, f in ipairs(open_with_ai()) do table.insert(steps, f) end;
+	table.insert(steps, function() click("add_offer_button") end);
+	table.insert(steps, function() log("SHOT list") end);
+	-- "Region for Troops" is the second button of the region action (same id as "Gift Region")
+	table.insert(steps, function()
+		local gift = find_id(kit.root(), "diplomac_action_possible_6");
+		local parent = gift and UIComponent(gift:Parent());
+		local seen = 0;
+		for i = 0, (parent and parent:ChildCount() or 0) - 1 do
+			local child = UIComponent(parent:Find(i));
+			if child:Id() == "diplomac_action_possible_6" then
+				seen = seen + 1;
+				if seen == 2 then
+					log("click Region for Troops");
+					child:SimulateClick();
+					return;
+				end;
+			end;
+		end;
+		log("Region for Troops button not found (%d region buttons)", seen);
+	end);
+	table.insert(steps, function() log("SHOT troops") end);
 elseif MODE == "panel" then
 	for _, f in ipairs(open_with_ai()) do table.insert(steps, f) end;
 	table.insert(steps, function() click("add_offer_button") end);

@@ -32,20 +32,19 @@ local handlers = {
 		local ok, err = pcall(governor.on_transfer, phase, region_key, to);
 		if not ok then rt.log("transfer handler (%s %s) failed: %s", phase, region_key, tostring(err)) end;
 	end,
-	-- the panel's federates row: what the AI gives as federates for the regions you give
-	-- -> count, cost, short text (when none), tooltip
+	-- "Region for Troops": what the AI gives as federates for the regions you give
+	-- -> number of units, their recruitment cost, the reason when none, their names one per line
 	federates = function(ai_key, player_key, ...)
-		local ok, offer, short, reason = pcall(federates.offer, ai_key, player_key, { ... });
+		local ok, offer, _, reason = pcall(federates.offer, ai_key, player_key, { ... });
 		if not ok then
 			rt.log("federates offer from %s failed: %s", tostring(ai_key), tostring(offer));
-			return 0, 0, "error", tostring(offer);
+			return 0, 0, "Error, see the log.", nil;
 		end;
-		if not offer then return 0, 0, short, reason end;
+		if not offer then return 0, 0, reason, nil end;
 		local names = {};
 		for _, unit in ipairs(offer.units) do table.insert(names, rt.localise("land_units_onscreen_name_" .. unit) or unit) end;
 		rt.log("federates from %s for %s: %s", ai_key, table.concat({ ... }, ", "), table.concat(offer.units, ", "));
-		return #offer.units, offer.cost, nil, string.format("Federates: %d units, %d gold in recruitment cost:\n%s",
-			#offer.units, offer.cost, table.concat(names, "\n"));
+		return #offer.units, offer.cost, nil, table.concat(names, "\n");
 	end,
 };
 if twase and twase.enable_region_trading then
