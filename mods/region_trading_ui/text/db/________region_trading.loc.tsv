@@ -1,0 +1,10 @@
+key	text	tooltip
+#Loc;1;text/db/________region_trading.loc		
+diplomacy_strings_string_diplomatic_option_trade_region	Trade Regions	true
+diplomacy_strings_string_diplomatic_option_trade_region_tooltip	Give regions to another faction, demand theirs, or swap. Tick as many as you like on each side; the AI judges the whole trade. || Offering a region to a migrating tribe settles them there (only where their army stands, and never your capital). In return their attitude improves greatly.	true
+diplomacy_strings_string_offer_or_demand_regions	Regions:	true
+uied_component_texts_localised_string_tx_title_default_Text_470063	Trade Regions	true
+uied_component_texts_localised_string_offers_title_faction_left_Text_470063	Give Regions	true
+uied_component_texts_localised_string_demands_title_faction_left_Text_3a0005	Demand Regions	true
+uied_component_texts_localised_string_region_trade_give_Tooltip	The regions you give. Tick as many as you like. || Tick regions on the right too to ask for some in return: the AI judges the whole trade.	true
+uied_component_texts_localised_string_region_trade_demand_Tooltip	The regions you ask for. Tick as many as you like. || The AI values what it gives up, so the more valuable the regions, the more it wants in return.	true

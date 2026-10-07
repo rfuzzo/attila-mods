@@ -16397,8 +16397,8 @@ root:
             offset: 20 10
             flags:
               allow_v_resize: 0
-            tooltip_text: Select from the options below to add them to the offers section of your diplomatic proposal. || Once you have picked all your offers click the accept button. || You can then choose to add more offers or demands or send your proposal.
-            tooltip_id: offers_title_Tooltip_2b0037p
+            tooltip_text: "The regions you give. Tick as many as you like. || Tick regions on the right too to ask for some in return: the AI judges the whole trade."
+            tooltip_id: region_trade_give_Tooltip
             docking: 2
             dock_offset: 0 10
             default_state: faction_left
@@ -16406,7 +16406,7 @@ root:
             - name: faction_left
               uid: e06a7110
               bounds: 309 30
-              text: Gift Region
+              text: Give Regions
               text_bounds: 4 4
               text_valign: 2
               text_localised: '0001'
@@ -16785,6 +16785,8 @@ root:
           - name: demands_title
             uid: 80b87110
             offset: 22 10
+            tooltip_text: "The regions you ask for. Tick as many as you like. || The AI values what it gives up, so the more valuable the regions, the more it wants in return."
+            tooltip_id: region_trade_demand_Tooltip
             docking: 2
             dock_offset: 0 10
             default_state: faction_left
@@ -16792,7 +16794,7 @@ root:
             - name: faction_left
               uid: c0bb7110
               bounds: 306 30
-              text: Demand Region
+              text: Demand Regions
               text_bounds: 4 4
               text_valign: 2
               text_localised: '0001'
@@ -16819,7 +16821,7 @@ root:
           - name: default
             uid: 60c27110
             bounds: 416 30
-            text: Gift Region
+            text: Trade Regions
             text_bounds: 4 4
             text_valign: 1
             text_localised: '0001'
