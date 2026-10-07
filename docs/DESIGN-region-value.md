@@ -15,8 +15,14 @@ Regions have no component of their own (vanilla only gifts them to hordes, for f
 **V gold** to the AI counts exactly like **the AI not having to pay V gold** in Payments. So regions, gold and
 treaties are on one scale, and everything the game applies to gold applies to regions too:
 
-- **Relative to the AI's treasury.** The same region weighs much more for a poor faction. Measured (Aquae Sextiae,
-  V = 6,069): Alamanni +154.5, Eastern Roman Empire +13.1.
+- **Relative to the AI's economy.** The main, linear part of a gift's score is the amount over the paying AI's GDP
+  (per turn), weighted by its personality, steeper beyond its budget, capped (`0x101d76bb4`). A smaller part sizes the
+  gift (small / medium / large from 500 / 2,000 / 7,500 gold × an economic power, measured against the other side,
+  i.e. you). So the same region weighs much more for a poor faction. Measured (Aquae Sextiae, V = 6,069): Alamanni
+  +154.5, Eastern Roman Empire +13.1.
+- **Gold the AI receives** only counts through that size class (and as goodwill), not linearly. So selling a region
+  for gold balances (the region and the AI's payment both go through the linear part), but buying one with gold is
+  expensive: Viminacium (V 3,240 for the ERE) needed 15,700 gold.
 - **The relationship.** A friendly AI values your gold, and so your regions, more than a hostile one.
 - **Small amounts.** The game's table ignores amounts that are small for the treasury. TWASE interpolates below the
   first step, so a swap 439 short now scores −0.8 for the ERE instead of 0.
