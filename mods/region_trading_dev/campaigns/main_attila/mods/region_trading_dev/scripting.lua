@@ -3,7 +3,29 @@
 -- Loaded after region_trading (mods load sorted by name).
 
 local rt = require("region_trading/core");
-local kit = require("region_trading/ui/kit");
+
+local kit = {};
+
+function kit.root()
+	return rt.cm():ui_root();
+end;
+
+-- kit.after(seconds, fn): run fn after a delay, through the campaign's time triggers
+local timers, next_timer = {}, 0;
+function kit.after(seconds, fn)
+	next_timer = next_timer + 1;
+	local id = "RegionTradingDevTimer" .. next_timer;
+	timers[id] = fn;
+	rt.cm():add_time_trigger(id, seconds);
+end;
+
+rt.cm():add_listener("RegionTradingDev_Timer", "TimeTrigger", true, function(context)
+	local fn = timers[context.string];
+	if fn then
+		timers[context.string] = nil;
+		fn();
+	end;
+end, true);
 
 local AI = "att_fact_eastern_roman_empire";
 local REGION = "att_reg_lusitania_olisipo";
@@ -24,10 +46,6 @@ local function texts(uic, out, depth)
 		for i = 0, uic:ChildCount() - 1 do texts(UIComponent(uic:Find(i)), out, depth - 1) end;
 	end;
 	return out;
-end;
-
-local function actions(tag)
-	log("%s actions (type:side:available:blocked): %s", tag, tostring(twase.dev_diplomacy_actions()));
 end;
 
 local function click(id, depth)
@@ -58,7 +76,8 @@ local function list_rows(list_id)
 	return rows;
 end;
 
--- "panel": open the native region panel with the AI; "transfer": a scripted transfer, for the minimap
+-- "panel": open the native region panel with the AI; "transfer": the deal's transfer, for the minimap (needs
+-- [dev] lua_dev_functions = true in TWASE/config.ini)
 local MODE = "panel";
 
 local steps = {};

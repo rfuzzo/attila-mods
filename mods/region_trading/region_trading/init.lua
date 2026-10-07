@@ -10,13 +10,13 @@ rt.log("version %s loading", rt.version);
 
 maga.disable();
 
--- For the console: region_trading.explain(region_key, ai_key[, kind[, ai_region_key]])
+-- For the console: region_trading.explain(region_key[, faction_key]), region_trading.value.of(region_key, faction_key)
 region_trading = { explain = explain, rt = rt, value = value };
 
--- Native region deals (the game's own "Gift Region", widened by TWASE): the AI values a region like this much gold.
-if twase and twase.set_region_value_handler then
-	twase.dev_native_region_trading(true);
-	twase.set_region_value_handler(function(region_key, faction_key)
+-- The engine's region deals (its "Gift Region", widened by TWASE): the AI values a region like this much gold, and
+-- governors survive the transfer of their province capital.
+local handlers = {
+	value = function(region_key, faction_key)
 		local ok, gold = pcall(value.of, region_key, faction_key);
 		if not ok then
 			rt.log("value of %s for %s failed: %s", tostring(region_key), tostring(faction_key), tostring(gold));
@@ -24,13 +24,21 @@ if twase and twase.set_region_value_handler then
 		end;
 		rt.log("value of %s for %s: %d", region_key, faction_key, gold);
 		return gold;
-	end);
-	if twase.set_region_transfer_handler then
-		twase.set_region_transfer_handler(function(phase, region_key, to)
-			local ok, err = pcall(governor.on_transfer, phase, region_key, to);
-			if not ok then rt.log("transfer handler (%s %s) failed: %s", phase, region_key, tostring(err)) end;
-		end);
-	end;
+	end,
+	transfer = function(phase, region_key, to)
+		local ok, err = pcall(governor.on_transfer, phase, region_key, to);
+		if not ok then rt.log("transfer handler (%s %s) failed: %s", phase, region_key, tostring(err)) end;
+	end,
+};
+if twase and twase.enable_region_trading then
+	twase.enable_region_trading(handlers);
+elseif twase and twase.dev_native_region_trading then
+	-- TEMPORARY (remove once nobody runs a TWASE build from before 2026-10-07): the earlier dev API
+	twase.dev_native_region_trading(true);
+	twase.set_region_value_handler(handlers.value);
+	if twase.set_region_transfer_handler then twase.set_region_transfer_handler(handlers.transfer) end;
+else
+	rt.log("needs TWASE with twase.enable_region_trading, region trading stays off");
 end;
 
 -- Smoke test: what the mod will build on, once the game model exists.
