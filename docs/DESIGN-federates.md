@@ -140,7 +140,8 @@ start, to tune in play. (2, 3) open: ceding land is a big step for the player to
 peace or a tributary relationship.
 
 **Decided (2026-10-07), (2, 3):** a foedus is land + a contingent + a bond. Confirming a Region for Troops adds the
-native terms "Make Tributary State" (action type 25) and, at war, "Peace" (type 2, to confirm) to the deal, the way a
+native terms "Peace Treaty" (type 12, at war) and "Make Tributary State" (type 25; at war the engine offers it once
+peace is in the deal) to the deal, the way a
 click in "Add Offer/Demand" does (dispatcher `0x1035f5044`); the game executes them on acceptance, no script calls. In
 a troops deal TWASE leaves the game's scores of those two terms out and adds the willingness W instead.
 
