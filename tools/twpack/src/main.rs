@@ -10,6 +10,7 @@
 //
 // Patterns are case-insensitive path prefixes, or globs if they contain `*`.
 
+mod render;
 mod uic;
 
 use std::fs;
@@ -134,6 +135,27 @@ enum UiCommand {
         #[arg(short, long)]
         verbose: bool,
     },
+    /// Render a layout as a static HTML page (`<out>/index.html`) with the skin images it uses, to look at it without the game
+    Render {
+        layout: PathBuf,
+        /// Output folder
+        #[arg(short, long)]
+        out: PathBuf,
+        /// Packs to take images from (default: the game's data.pack and DLC packs); later packs win
+        #[arg(long)]
+        pack: Vec<PathBuf>,
+        /// Render only the component with this name (the first one, depth first)
+        #[arg(long)]
+        only: Option<String>,
+        /// Show this state of every component that has it (hover, down, ...) instead of the default state
+        #[arg(long)]
+        state: Option<String>,
+        /// Also draw components whose visible flag is off (dashed outline)
+        #[arg(long)]
+        show_hidden: bool,
+        #[arg(long, default_value_t = 1.0)]
+        scale: f32,
+    },
     /// Decode layouts (a file or a folder) to the YAML text form, `<name>.uic.yml`
     Export {
         path: PathBuf,
@@ -230,7 +252,7 @@ fn main() -> Result<()> {
             // Loc files don't need a schema, but extract only converts to TSV when it gets one.
             extract(&mut pack, paths, &out, &Some(Schema::default()))?;
         }
-        Command::Ui { command } => ui(command)?,
+        Command::Ui { command } => ui(command, game)?,
         Command::Build { folder, out, schema } => {
             let schema = schema.load()?;
             build(&folder, &out, &schema, game)?;
@@ -238,6 +260,15 @@ fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+fn dirs_home() -> PathBuf {
+    PathBuf::from(std::env::var_os("HOME").unwrap_or_default())
+}
+
+/// Several packs merged into one (later ones win).
+fn open_all(paths: &[PathBuf], game: &GameInfo) -> Result<Pack> {
+    Pack::read_and_merge(paths, game, true, false, false).with_context(|| format!("opening {} packs", paths.len()))
 }
 
 fn open(path: &Path, game: &GameInfo) -> Result<Pack> {
@@ -400,7 +431,7 @@ fn encode_text_file(file: &Path) -> Result<Vec<u8>> {
     uic::encode(&layout).with_context(|| file.display().to_string())
 }
 
-fn ui(command: UiCommand) -> Result<()> {
+fn ui(command: UiCommand, game: &GameInfo) -> Result<()> {
     match command {
         UiCommand::Check { paths, all } => {
             let mut files = Vec::new();
@@ -441,6 +472,32 @@ fn ui(command: UiCommand) -> Result<()> {
             print_tree(&layout.root, 0, verbose, &mut text);
             // Stop quietly when piped into `head`.
             let _ = io::stdout().write_all(text.as_bytes());
+        }
+        UiCommand::Render { layout, out, pack, only, state, show_hidden, scale } => {
+            let decoded = uic::decode(&fs::read(&layout)?).with_context(|| layout.display().to_string())?;
+            let title = layout.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+            let opts = render::Options { only, state, show_hidden, scale };
+            let page = render::render(&decoded, &title, &opts).map_err(|e| anyhow!(e))?;
+            write_file(&out.join("index.html"), &page.html)?;
+            let packs = if pack.is_empty() {
+                let data = dirs_home().join("Library/Application Support/Steam/steamapps/common/Total War Attila/TotalWarAttilaData/data");
+                ["data", "belisarius", "charlemagne", "slavs"].iter().map(|n| data.join(format!("{}.pack", n))).filter(|p| p.exists()).collect()
+            } else {
+                pack
+            };
+            let mut pack = open_all(&packs, game)?;
+            let by_lowercase: std::collections::HashMap<String, String> = pack.files().keys().map(|k| (k.to_lowercase(), k.clone())).collect();
+            let mut missing = Vec::new();
+            for image in &page.images {
+                match by_lowercase.get(image) {
+                    Some(key) => {
+                        pack.extract(ContainerPath::File(key.clone()), &out, true, &None, false, true, &None).with_context(|| format!("extracting {}", key))?;
+                    }
+                    None => missing.push(image.clone()),
+                }
+            }
+            println!("{}: {} images ({} not found in the packs)", out.join("index.html").display(), page.images.len(), missing.len());
+            missing.iter().take(10).for_each(|m| println!("  missing {}", m));
         }
         UiCommand::Export { path, out, no_uids } => {
             if path.is_dir() {
