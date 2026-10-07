@@ -6,8 +6,11 @@
 //   twpack db import <pack> <tsv...>                  import TSV tables into an existing pack
 //   twpack loc export <pack> -o <dir> [pattern...]    export loc files as TSV
 //   twpack build <folder> -o <out.pack>               build a mod pack from a folder
+//   twpack ui check|tree|export|import ...            binary UI layouts (see `twpack ui --help`)
 //
 // Patterns are case-insensitive path prefixes, or globs if they contain `*`.
+
+mod uic;
 
 use std::fs;
 use std::io::{self, Write};
@@ -66,6 +69,11 @@ enum Command {
         #[command(subcommand)]
         command: LocCommand,
     },
+    /// Binary UI layout files (`ui/...`, no extension, `Version0NN` header)
+    Ui {
+        #[command(subcommand)]
+        command: UiCommand,
+    },
     /// Build a mod pack (PFH4) from a folder; .tsv files become DB tables / loc files
     Build {
         folder: PathBuf,
@@ -104,6 +112,41 @@ enum LocCommand {
     Export {
         pack: PathBuf,
         patterns: Vec<String>,
+        #[arg(short, long)]
+        out: PathBuf,
+    },
+}
+
+#[derive(Subcommand)]
+enum UiCommand {
+    /// Decode and re-encode layouts (files or folders) and report any that don't come back byte-identical
+    Check {
+        #[arg(required = true)]
+        paths: Vec<PathBuf>,
+        /// Print every failure instead of the first 20
+        #[arg(short, long)]
+        all: bool,
+    },
+    /// Print a layout as an outline: components with their first state's size, offset, images, text and layout engine
+    Tree {
+        file: PathBuf,
+        /// Also list states, images, animations
+        #[arg(short, long)]
+        verbose: bool,
+    },
+    /// Decode layouts (a file or a folder) to the YAML text form, `<name>.uic.yml`
+    Export {
+        path: PathBuf,
+        /// Output file (stdout if omitted) or, for a folder, the output folder
+        #[arg(short, long)]
+        out: Option<PathBuf>,
+        /// Leave out the ids of components, states and images nothing refers to by raw id (shorter; import makes new ones)
+        #[arg(long)]
+        no_uids: bool,
+    },
+    /// Encode the text form back into binary layouts: a `.uic.yml` file, or a folder of them
+    Import {
+        path: PathBuf,
         #[arg(short, long)]
         out: PathBuf,
     },
@@ -187,6 +230,7 @@ fn main() -> Result<()> {
             // Loc files don't need a schema, but extract only converts to TSV when it gets one.
             extract(&mut pack, paths, &out, &Some(Schema::default()))?;
         }
+        Command::Ui { command } => ui(command)?,
         Command::Build { folder, out, schema } => {
             let schema = schema.load()?;
             build(&folder, &out, &schema, game)?;
@@ -282,6 +326,10 @@ fn build(folder: &Path, out: &Path, schema: &Option<Schema>, game: &GameInfo) ->
         let relative = file.strip_prefix(folder)?.to_string_lossy().replace('\\', "/");
         if file.extension().is_some_and(|ext| ext == "tsv") {
             insert_tsv(&mut pack, file, schema)?;
+        } else if let Some(path) = relative.strip_suffix(UIC_TEXT_SUFFIX) {
+            let data = encode_text_file(file)?;
+            pack.insert(rpfm_lib::files::RFile::new_from_vec(&data, FileType::Unknown, 0, path))?;
+            println!("{} -> {}", file.display(), path);
         } else {
             pack.insert_file(file, &relative, schema).with_context(|| format!("adding {}", file.display()))?;
         }
@@ -314,4 +362,184 @@ fn save(pack: &mut Pack, path: &Path, game: &GameInfo) -> Result<()> {
         fs::create_dir_all(parent)?;
     }
     pack.save(Some(path), game, &None).with_context(|| format!("saving {}", path.display()))
+}
+
+const UIC_TEXT_SUFFIX: &str = ".uic.yml";
+
+/// Files below `path` (or `path` itself) that start with a layout header, with their path relative to `path`.
+fn layout_files(path: &Path) -> Result<Vec<(PathBuf, PathBuf)>> {
+    let mut files = Vec::new();
+    if path.is_dir() {
+        walk(path, &mut files)?;
+    } else {
+        files.push(path.to_path_buf());
+    }
+    files.sort();
+    let mut found = Vec::new();
+    for file in files {
+        let mut header = [0u8; 10];
+        let is_layout = fs::File::open(&file).and_then(|mut f| io::Read::read_exact(&mut f, &mut header)).is_ok() && uic::looks_like_layout(&header);
+        if is_layout {
+            let relative = if path.is_dir() { file.strip_prefix(path)?.to_path_buf() } else { file.file_name().map(PathBuf::from).unwrap_or_default() };
+            found.push((file, relative));
+        }
+    }
+    Ok(found)
+}
+
+fn write_file(path: &Path, data: impl AsRef<[u8]>) -> Result<()> {
+    if let Some(parent) = path.parent().filter(|parent| !parent.as_os_str().is_empty()) {
+        fs::create_dir_all(parent)?;
+    }
+    fs::write(path, data).with_context(|| format!("writing {}", path.display()))
+}
+
+/// Encode the text of a `.uic.yml` file.
+fn encode_text_file(file: &Path) -> Result<Vec<u8>> {
+    let layout = uic::from_text(&fs::read_to_string(file)?).with_context(|| file.display().to_string())?;
+    uic::encode(&layout).with_context(|| file.display().to_string())
+}
+
+fn ui(command: UiCommand) -> Result<()> {
+    match command {
+        UiCommand::Check { paths, all } => {
+            let mut files = Vec::new();
+            for path in &paths {
+                files.extend(layout_files(path)?.into_iter().map(|(file, _)| file));
+            }
+            // version -> (ok, failed)
+            let mut versions: std::collections::BTreeMap<String, (usize, usize)> = Default::default();
+            let mut failures = Vec::new();
+            for file in files {
+                let data = fs::read(&file).with_context(|| format!("reading {}", file.display()))?;
+                let version = String::from_utf8_lossy(&data[7..10]).to_string();
+                let result = check_layout(&data);
+                let entry = versions.entry(version).or_default();
+                match result {
+                    Ok(()) => entry.0 += 1,
+                    Err(e) => {
+                        entry.1 += 1;
+                        failures.push(format!("{}: {:#}", file.display(), e));
+                    }
+                }
+            }
+            for (version, (ok, failed)) in &versions {
+                println!("v{}: {} ok, {} failed", version, ok, failed);
+            }
+            let limit = if all { failures.len() } else { 20 };
+            failures.iter().take(limit).for_each(|f| println!("  {}", f));
+            if failures.len() > limit {
+                println!("  ... and {} more (--all)", failures.len() - limit);
+            }
+            if !failures.is_empty() {
+                bail!("{} layouts failed", failures.len());
+            }
+        }
+        UiCommand::Tree { file, verbose } => {
+            let layout = uic::decode(&fs::read(&file)?).with_context(|| file.display().to_string())?;
+            let mut text = format!("Version{:03}\n", layout.version);
+            print_tree(&layout.root, 0, verbose, &mut text);
+            // Stop quietly when piped into `head`.
+            let _ = io::stdout().write_all(text.as_bytes());
+        }
+        UiCommand::Export { path, out, no_uids } => {
+            if path.is_dir() {
+                let out = out.ok_or_else(|| anyhow!("exporting a folder needs -o <folder>"))?;
+                let (mut done, mut skipped) = (0, 0);
+                for (file, relative) in layout_files(&path)? {
+                    let text = uic::decode(&fs::read(&file)?).and_then(|layout| uic::to_text(&layout, !no_uids));
+                    match text {
+                        Ok(text) => {
+                            write_file(&out.join(format!("{}{}", relative.display(), UIC_TEXT_SUFFIX)), text)?;
+                            done += 1;
+                        }
+                        Err(e) => {
+                            eprintln!("skipped {}: {:#}", file.display(), e);
+                            skipped += 1;
+                        }
+                    }
+                }
+                println!("exported {} layouts to {} ({} skipped)", done, out.display(), skipped);
+            } else {
+                let layout = uic::decode(&fs::read(&path)?).with_context(|| path.display().to_string())?;
+                let text = uic::to_text(&layout, !no_uids)?;
+                match out {
+                    Some(out) => write_file(&out, text)?,
+                    None => {
+                        let _ = io::stdout().write_all(text.as_bytes());
+                    }
+                }
+            }
+        }
+        UiCommand::Import { path, out } => {
+            if path.is_dir() {
+                let mut files = Vec::new();
+                walk(&path, &mut files)?;
+                files.sort();
+                let mut done = 0;
+                for file in files {
+                    let relative = file.strip_prefix(&path)?.to_string_lossy().to_string();
+                    if let Some(name) = relative.strip_suffix(UIC_TEXT_SUFFIX) {
+                        write_file(&out.join(name), encode_text_file(&file)?)?;
+                        done += 1;
+                    }
+                }
+                println!("imported {} layouts to {}", done, out.display());
+            } else {
+                write_file(&out, encode_text_file(&path)?)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Binary -> layout -> binary must give the same bytes; layout -> text -> layout the same layout (with and without ids).
+fn check_layout(data: &[u8]) -> Result<()> {
+    let layout = uic::decode(data)?;
+    let back = uic::encode(&layout)?;
+    if let Some(at) = back.iter().zip(data).position(|(a, b)| a != b).or((back.len() != data.len()).then(|| back.len().min(data.len()))) {
+        bail!("re-encoded differs (first difference at {:#x}, {} vs {} bytes)", at, back.len(), data.len());
+    }
+    let text = uic::to_text(&layout, true)?;
+    let again = uic::encode(&uic::from_text(&text).context("reading the text form")?)?;
+    if again != data {
+        bail!("text form (with ids) doesn't give the same file back");
+    }
+    // Without ids the ids are made up again, so compare what's written: the same text must come out.
+    let short = uic::to_text(&layout, false)?;
+    let regenerated = uic::to_text(&uic::from_text(&short).context("reading the short text form")?, false)?;
+    if short != regenerated {
+        bail!("text form (without ids) changes when read and written again");
+    }
+    Ok(())
+}
+
+fn print_tree(u: &uic::Uic, depth: usize, verbose: bool, out: &mut String) {
+    let indent = "  ".repeat(depth);
+    let mut line = format!("{}{}", indent, u.name);
+    if let Some(state) = u.states.first() {
+        line += &format!("  {}x{} @ {},{}", state.bounds.0[0], state.bounds.0[1], u.offset.0[0], u.offset.0[1]);
+        if !state.text_label.is_empty() || !state.text.is_empty() {
+            line += &format!("  text={:?}", if state.text_label.is_empty() { &state.text } else { &state.text_label });
+        }
+    }
+    if !u.tail.kind.is_empty() {
+        line += &format!("  [{}]", u.tail.kind);
+    }
+    out.push_str(&line);
+    out.push('\n');
+    if verbose {
+        for state in &u.states {
+            out.push_str(&format!("{}  state {} {}x{} {} images\n", indent, state.name, state.bounds.0[0], state.bounds.0[1], state.image_metrics.len()));
+        }
+        for image in &u.images {
+            out.push_str(&format!("{}  image {} {}x{}\n", indent, image.path, image.width, image.height));
+        }
+        for func in &u.funcs {
+            out.push_str(&format!("{}  anim {} ({} steps)\n", indent, func.name, func.anims.len()));
+        }
+    }
+    for child in &u.children {
+        print_tree(child, depth + 1, verbose, out);
+    }
 }

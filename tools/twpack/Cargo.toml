@@ -8,4 +8,6 @@ license = "MIT"
 [dependencies]
 rpfm_lib = { git = "https://github.com/Frodo45127/rpfm.git", tag = "v5.1.1" }
 anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+serde_yaml_ng = "0.10"
 clap = { version = "4.6.7", features = ["derive"] }
