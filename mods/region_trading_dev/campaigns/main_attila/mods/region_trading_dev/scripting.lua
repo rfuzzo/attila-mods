@@ -78,7 +78,7 @@ end;
 
 -- "panel": open the native region panel with the AI; "transfer": the deal's transfer, for the minimap (needs
 -- [dev] lua_dev_functions = true in TWASE/config.ini)
-local MODE = "willingness";
+local MODE = "actions";
 
 local steps = {};
 if MODE == "federates" then
@@ -144,18 +144,23 @@ elseif MODE == "willingness" then
 		end);
 	end;
 elseif MODE == "actions" then
-	-- the Add Offer/Demand buttons: their ids (type numbers) and labels
-	for _, f in ipairs(open_with_ai()) do table.insert(steps, f) end;
-	table.insert(steps, function() click("add_offer_button") end);
-	table.insert(steps, function()
-		local gift = find_id(kit.root(), "diplomac_action_possible_6");
-		local parent = gift and UIComponent(gift:Parent());
+	-- the Add Offer/Demand buttons: their ids (type numbers) and labels; at war, again after adding peace
+	local function list_actions(tag)
+		local any = find_id(kit.root(), "diplomac_action_possible_12") or find_id(kit.root(), "diplomac_action_possible_6");
+		local parent = any and UIComponent(any:Parent());
 		for i = 0, (parent and parent:ChildCount() or 0) - 1 do
 			local child = UIComponent(parent:Find(i));
 			local label = child:Find("row_tx");
-			log("ACTION %s = %s", child:Id(), label and UIComponent(label):GetStateText() or "?");
+			log("ACTION %s %s = %s", tag, child:Id(), label and UIComponent(label):GetStateText() or "?");
 		end;
-	end);
+	end;
+	for _, f in ipairs(open_with_ai()) do table.insert(steps, f) end;
+	table.insert(steps, function() click("add_offer_button") end);
+	table.insert(steps, function() list_actions("before") end);
+	table.insert(steps, function() click("diplomac_action_possible_12") end);
+	table.insert(steps, function() click("add_offer_button") end);
+	table.insert(steps, function() list_actions("after peace") end);
+	table.insert(steps, function() log("SHOT deal") end);
 elseif MODE == "troops" then
 	for _, f in ipairs(open_with_ai()) do table.insert(steps, f) end;
 	table.insert(steps, function() click("add_offer_button") end);

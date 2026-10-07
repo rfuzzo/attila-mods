@@ -27,7 +27,7 @@ history (until commit `4d9163d`).
 | Topic | Decision |
 |---|---|
 | Partners | any settled faction (neither side a horde); the AI decides by its own deal score |
-| When | at peace and in peace negotiations during a war ("region for peace", decided 2026-10-04) |
+| When | at peace and in peace negotiations during a war ("region for peace", decided 2026-10-04); at war the region entries appear once peace is in the deal (2026-10-07) |
 | What | give regions, demand regions, both in one deal (swaps), together with any other terms |
 | Value | a region is worth gold to the AI (income, buildings, province, religion, unrest); it may be negative, a burden. See [the region value](DESIGN-region-value.md) |
 | Troops | federates, our own addition to native deals. See [federates](DESIGN-federates.md) |
@@ -69,7 +69,7 @@ scale are interpolated. Details and open proposals: [the region value](DESIGN-re
   to drop one side, reopen the panel and untick it.
 - **Likelihood:** the game's, with the deal score in the tooltip (TWASE's existing tweak).
 - **Layout:** the demand list lacked the offers list's background (vanilla's `list_clip` has no image, and its `list_box` background is transparent, `ffffff00`). Fixed in `mods/region_trading_ui/ui/campaign ui/diplomacy_hud.uic.yml` (the vanilla layout as text, see [UI-FORMAT](UI-FORMAT.md); the diff against `twpack ui export` of the vanilla file is the 12 lines that add the parchment row image to `list_demands/list_clip`). Loose layout files are ignored by the game (tested), so it ships as a pack: `region_trading_ui.pack`, built by `tools/deploy.sh region_trading_ui` (marker file `.build-pack`) and listed in `tools/mod_list.txt`.
-- **Open:** the names ("Gift Region" is loc text).
+- **Names:** `mods/region_trading_ui/text/db/________region_trading.loc.tsv` (in the same pack) renames the entry and the panel to "Trade Regions", the lists to "Give Regions" / "Demand Regions", the deal list label to "Regions:", rewrites the entry's tooltip (vanilla's is about migrating tribes only) and gives the two list titles their own tooltips (the layout's `region_trade_give_Tooltip` / `region_trade_demand_Tooltip`; vanilla's `offers_title_Tooltip_2b0037p` is shared with three other panels). The file name has more leading underscores than Fireforged's `_diplomacy_strings` / `_uied_component_texts` copies so that it is read first (the same convention; to be confirmed in game). Not yet seen in game.
 
 ## Execution
 
