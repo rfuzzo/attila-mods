@@ -18,12 +18,12 @@ region_trading = { explain = explain, rt = rt, value = value };
 local handlers = {
 	-- other_key: the other side of the deal (nil from TWASE builds before 2026-10-07)
 	value = function(region_key, faction_key, other_key)
-		local ok, gold = pcall(value.of, region_key, faction_key, other_key);
+		local ok, gold, parts = pcall(value.of, region_key, faction_key, other_key);
 		if not ok then
 			rt.log("value of %s for %s failed: %s", tostring(region_key), tostring(faction_key), tostring(gold));
 			return 0;
 		end;
-		rt.log("value of %s for %s (with %s): %d", region_key, faction_key, tostring(other_key), gold);
+		rt.log("value of %s for %s (with %s): %s", region_key, faction_key, tostring(other_key), parts.formula);
 		return gold;
 	end,
 	transfer = function(phase, region_key, to)

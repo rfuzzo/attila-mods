@@ -15,9 +15,12 @@ return function(region_key, faction_key, other_key)
 	other_key = other_key or rt.cm():get_local_faction();
 	local total, parts = value.of(region_key, faction_key, other_key);
 	local out = {};
-	for k, v in pairs(parts) do table.insert(out, k .. " " .. number(v)) end;
+	for k, v in pairs(parts) do
+		if k ~= "formula" then table.insert(out, k .. " " .. number(v)) end;
+	end;
 	table.sort(out);
-	local text = string.format("%s for %s: %d gold (%s)", rt.region_name(region_key), faction_key, total, table.concat(out, ", "));
+	local text = string.format("%s for %s: %d gold = %s\n    parts: %s", rt.region_name(region_key), faction_key, total,
+		parts.formula, table.concat(out, ", "));
 	rt.log("%s", text);
 	return text;
 end;

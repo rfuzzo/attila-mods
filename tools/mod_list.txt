@@ -1,0 +1,5 @@
+mod "@_judex_rex_graphics.pack";
+mod "loyalty_penalty_from_offices_fixed.pack";
+mod "@Fireforged-Empire_1.pack";
+mod "@Fireforged-Empire_2.pack";
+mod "@Fireforged-Empire_ballast.pack";

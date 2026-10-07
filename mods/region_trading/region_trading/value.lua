@@ -138,20 +138,42 @@ function value.of(region_key, faction_key, other_key)
 	local total = positive * factor + loss - burden;
 	parts.factor = factor;
 
+	-- the formula with its numbers, for the log
+	local function n(v) return string.format("%d", math.floor(v + 0.5)) end;
+	local function pct(v) return string.format("%+d %%", math.floor(v * 100 + 0.5)) end;
+	local factors = {};
+	if parts.province_complete then table.insert(factors, "province " .. pct(parts.province_complete)) end;
+	if parts.enclave then table.insert(factors, "enclave " .. pct(parts.enclave)) end;
+	table.insert(factors, "religion " .. pct(religion));
+	local formula = string.format("(income %s + buildings %s) x %.2f (%s)", n(math.max(income, 0)),
+		n(parts.building_value), factor, table.concat(factors, ", "));
+	if loss < 0 then formula = formula .. " - loss " .. n(-loss) end;
+	if burden > 0 then
+		local burdens = {};
+		if parts.enclave_burden then table.insert(burdens, "enclave " .. n(parts.enclave_burden)) end;
+		if parts.unrest_burden then table.insert(burdens, "unrest " .. n(parts.unrest_burden)) end;
+		formula = formula .. string.format(" - burdens %s (%s)", n(burden), table.concat(burdens, ", "));
+	end;
+	formula = formula .. " = " .. n(total);
+
 	if giving and total > 0 then
 		local reluctance = config.cession_reluctance;
 		if not same_religion then reluctance = reluctance - config.reluctance_other_religion end;
 		total = total * reluctance;
 		parts.reluctance = reluctance;
+		formula = formula .. string.format(" x reluctance %.2f", reluctance);
 		if other_key then
 			local lever, reason = leverage(region, faction, world:faction_by_key(other_key));
 			if reason then
 				total = total * lever;
 				parts.leverage = lever;
 				parts.leverage_by = reason;
+				formula = formula .. string.format(" x leverage %.2f (%s's army, %s)", lever, other_key, reason);
 			end;
 		end;
+		formula = formula .. " = " .. n(total);
 	end;
+	parts.formula = formula;
 
 	return math.floor(total + 0.5), parts;
 end;
