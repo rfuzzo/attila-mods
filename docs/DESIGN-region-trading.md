@@ -13,7 +13,7 @@ Decided 2026-10-04: regions can also be traded **during a war**, in peace negoti
 | Fireforged / design | Native deal | What we add |
 |---|---|---|
 | region → gold / instalments | Gift Region + demand Payments | the region's value in the evaluation (TWASE hook; today the deal score gives regions +0.0) |
-| region ↔ region, demand a region | Gift Region + Demand Region (any AI region but its capital and garrisoned settlements; the engine only listed regions where your army stands) | same; the panel allows one ticked region in total, so no swap in one deal yet |
+| region ↔ region, demand a region | Gift Region + Demand Region (any AI region but its capital and garrisoned settlements; the engine only listed regions where your army stands) | same; TWASE lets the panel tick any number of regions in both lists (swaps) |
 | region → federates | not native | an option (UI to decide), units after acceptance, their cost in the evaluation |
 
 The Lua panel / execution below stay as the fallback; the MAGA-style map UI is dropped.
@@ -21,6 +21,8 @@ The Lua panel / execution below stay as the fallback; the MAGA-style map UI is d
 **AI valuation (done 2026-10-05):** TWASE adds a region's value to the native deal score as the mirror image of the AI paying that much gold (the evaluator only values gold the AI pays), with the value from `value.lua` via `twase.set_region_value_handler`. Tested: demand 2,000 gold −3.1; Ajax (2,103 to the ERE) alone +3.4; 2,000 + Ajax −1.5; 2,000 + Aquae Sextiae (6,069) +13.1.
 
 **Demand region (done 2026-10-05):** the panel shows both lists side by side; every AI region but its capital and garrisoned settlements can be demanded. Tested (WRE → ERE): Serdica alone −6.2.
+
+**Swaps and transfers (done 2026-10-07):** any number of ticked regions per list; OK puts them all into the deal, the deal list shows each side's regions, and the transfer moves both lists (armies in the settlements stay). TWASE calls the mod around the transfer, which keeps a province capital's governor alive (RTR's immortality trick). Region values below the first step of the game's gold table (small for the AI's treasury) are interpolated, so a slightly unfair swap scores slightly negative (Viminacium for Ajax, ERE: −0.8; a little gold made it acceptable). The X in the deal list removes the whole region term (one action in the engine); to drop one side, reopen the panel and untick it. Open: the demand list's background (layout, at packaging), the panel names ("Gift Region" → "Trade Regions").
 
 ## Decisions
 

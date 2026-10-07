@@ -1,6 +1,6 @@
 # Region trading – plan
 
-Status: 2026-10-05, Phase 5. Direction change: native region deals (TWASE widens the engine's Gift Region, tested end to end) using the native region list (no map UI), see the design. Region value in the native deal evaluation and demand region done (tested). Next: federates, TWASE setting.
+Status: 2026-10-07, Phase 5. Native region deals (TWASE branch `region-trading` widens the engine's Gift Region): give, demand and swap several regions in one deal, valued in the AI's own deal score, at peace and in peace talks, governors protected on transfer; all tested in game. Next: the AI's own proposals and thread safety (longer play test), cleanup (dead Lua panel code, a real TWASE switch, design doc), value model (burden, army leverage), federates, then packaging (names, the demand list's background, mod manager).
 
 ## Goal
 
