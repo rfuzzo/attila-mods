@@ -1,4 +1,4 @@
-# Region value – design (draft for review, 2026-10-07)
+# Region value – design (2026-10-07)
 
 What a region is worth to the AI in a deal, and how that becomes a yes or no. The current state is implemented and
 tested. The proposals at the end aren't implemented yet; the questions are what I need decided first.
@@ -89,7 +89,26 @@ different factions (rich / poor, friendly / hostile). Then tune `income_turns`, 
 amounts so typical deals land where they feel right: e.g. a friendly neighbour pays roughly a region's value in
 gold, a hostile one refuses unless you overpay.
 
-## 4. Questions for you
+## 4. Decisions (2026-10-07) and implementation
+
+1. **Burden:** negative income, unrest and enclave count; frontier is left out for now. Implemented: income below 0
+   counts in full (no clamp), unrest costs 30 gold per point of negative public order (instead of the × 0.5 floor), an
+   enclave halves the positive part and costs 1,000 for its defence.
+2. **Army leverage:** siege × 0.25, an army in the region at war × 0.5, at peace × 0.85, next to the region nothing.
+   Implemented (the other side's armies with a general in the region; the deal's other faction comes from TWASE).
+3. **Reluctance:** yes, giving land away is a huge deal: × 2.0 on the owner's positive value, − 0.5 for a region of
+   another religion than the owner's. Province capitals can't get more yet: the game's Lua has no province capital
+   check (TWASE task).
+4. **Poor vs rich:** kept, but by GDP only. TWASE rescales the region's amount so the game's economic power is
+   computed without the treasury (which a deal earlier in the turn can move): `clamp(GDP / 8,000, 0.2, 4)`.
+5. **Your side:** yes, show what a region is worth to you in the panel (next step).
+
+First numbers (WRE 367, valued by the ERE): Aquae Sextiae 5,069 (was 6,069, enclave burden), Olisipo 494 (enclave,
+unrest 600), Serdica 4,261 (its own, × 1.5), Viminacium 3,240 (its own, a WRE army in it at peace, × 0.85).
+To tune: all ERE regions have another majority religion than its (Arian) state religion, so the reluctance is
+always 1.5 for the ERE.
+
+## 5. The original questions
 
 1. **Burden:** which sources should count (negative income, unrest, frontier, enclave)? Any you'd leave out?
 2. **Army leverage:** are the factors in 3.2 right? Should an army at peace (military access) count at all, and

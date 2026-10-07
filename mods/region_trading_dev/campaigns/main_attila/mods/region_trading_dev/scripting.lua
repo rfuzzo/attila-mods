@@ -78,10 +78,28 @@ end;
 
 -- "panel": open the native region panel with the AI; "transfer": the deal's transfer, for the minimap (needs
 -- [dev] lua_dev_functions = true in TWASE/config.ini)
-local MODE = "panel";
+local MODE = "values";
 
 local steps = {};
-if MODE == "panel" then
+if MODE == "values" then
+	-- region values as the ERE sees them: WRE regions it would receive, its own it would give (to the WRE)
+	local player = "att_fact_western_roman_empire";
+	for _, region in ipairs({ "att_reg_narbonensis_aquae_sextiae", "att_reg_mediterraneus_occidentalis_ajax", "att_reg_lusitania_olisipo",
+			"att_reg_dardania_serdica", "att_reg_dardania_viminacium", "att_reg_palaestinea_aila" }) do
+		table.insert(steps, function() log("VALUE %s", region_trading.explain(region, AI, player)) end);
+	end;
+	-- every WRE region the WRE has an army in, valued by the WRE as owner against the ERE (leverage: none expected)
+	table.insert(steps, function()
+		local forces = rt.world():faction_by_key(player):military_force_list();
+		for i = 0, forces:num_items() - 1 do
+			local f = forces:item_at(i);
+			if f:is_army() and f:has_general() and f:general_character():has_region() then
+				local r = f:general_character():region();
+				log("ARMY in %s (owner %s)", r:name(), r:owning_faction():name());
+			end;
+		end;
+	end);
+elseif MODE == "panel" then
 	for _, f in ipairs(open_with_ai()) do table.insert(steps, f) end;
 	table.insert(steps, function() click("add_offer_button") end);
 	table.insert(steps, function() click("diplomac_action_possible_6") end);

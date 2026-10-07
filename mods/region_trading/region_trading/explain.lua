@@ -1,5 +1,6 @@
--- Console helper: region_trading.explain(region_key[, faction_key]) -> what the region is worth to a faction (default:
--- its owner) and the parts of that value, as the AI sees it in a deal. Also logged.
+-- Console helper: region_trading.explain(region_key[, faction_key[, other_key]]) -> what the region is worth to a
+-- faction (default: its owner) in a deal with `other_key` (default: you), and the parts of that value, as the AI sees
+-- it. Also logged.
 
 local rt = require("region_trading/core");
 local value = require("region_trading/value");
@@ -9,9 +10,10 @@ local function number(v)
 	return math.abs(v) < 5 and string.format("%.2f", v) or string.format("%d", math.floor(v + 0.5));
 end;
 
-return function(region_key, faction_key)
+return function(region_key, faction_key, other_key)
 	faction_key = faction_key or rt.world():region_manager():region_by_key(region_key):owning_faction():name();
-	local total, parts = value.of(region_key, faction_key);
+	other_key = other_key or rt.cm():get_local_faction();
+	local total, parts = value.of(region_key, faction_key, other_key);
 	local out = {};
 	for k, v in pairs(parts) do table.insert(out, k .. " " .. number(v)) end;
 	table.sort(out);

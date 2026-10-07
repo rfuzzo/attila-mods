@@ -68,21 +68,46 @@ local function borders(faction, region)
 	return false;
 end;
 
--- value.of(region_key, faction_key) -> total, parts
--- The region's value for `faction` as its (new or current) owner: (net income x turns + building share) x the factors
--- (province, enclave, religion, unrest), which multiply. `parts` lists every part for display.
-function value.of(region_key, faction_key)
-	local region = rt.world():region_manager():region_by_key(region_key);
-	local faction = rt.world():faction_by_key(faction_key);
+-- How much `other`'s armies have the region in hand, as a factor on the owner's value: its army besieges the
+-- settlement, or stands in the region at war or at peace (military access). An army next to the region doesn't count.
+-- -> factor, reason (nil if no army of `other` is there)
+local function leverage(region, owner, other)
+	local forces = other:military_force_list();
+	for i = 0, forces:num_items() - 1 do
+		local force = forces:item_at(i);
+		if force:is_army() and force:has_general() then
+			local general = force:general_character();
+			if general:has_region() and general:region():name() == region:name() then
+				if region:garrison_residence():is_under_siege() then return config.leverage_siege, "siege" end;
+				if owner:at_war_with(other) then return config.leverage_war, "war" end;
+				return config.leverage_peace, "peace";
+			end;
+		end;
+	end;
+	return 1, nil;
+end;
+
+-- value.of(region_key, faction_key[, other_key]) -> total, parts
+-- The region's value for `faction` as its new or current owner, in a deal with `other`:
+--   (positive income + building share) x factors (province, enclave, religion)  + a loss  - burdens (enclave, unrest)
+-- For the current owner giving it away, a positive value is raised by the reluctance to cede land and lowered by
+-- `other`'s armies holding the region (leverage). It can be negative: a burden the faction is glad to be rid of.
+-- `parts` lists every part for display.
+function value.of(region_key, faction_key, other_key)
+	local world = rt.world();
+	local region = world:region_manager():region_by_key(region_key);
+	local faction = world:faction_by_key(faction_key);
+	local giving = region:owning_faction():name() == faction_key;
 	local parts = {};
 
 	local wealth, upkeep, buildings = economy(region);
-	local income = math.max(wealth - upkeep, 0) * config.income_turns;
-	local base = income + buildings * config.building_share;
+	local income = (wealth - upkeep) * config.income_turns;
+	local positive = math.max(income, 0) + buildings * config.building_share;
+	local loss = math.min(income, 0); -- a region run at a loss
 	parts.wealth, parts.upkeep, parts.income_value = wealth, upkeep, income;
 	parts.building_value = buildings * config.building_share;
 
-	local factor = 1;
+	local factor, burden = 1, 0;
 
 	if owns_rest_of_province(faction_key, region) then
 		factor = factor * (1 + config.province_complete_bonus);
@@ -90,26 +115,44 @@ function value.of(region_key, faction_key)
 	end;
 
 	-- An enclave only matters for a new owner; the current owner borders itself trivially.
-	if region:owning_faction():name() ~= faction_key and not borders(faction_key, region) then
+	if not giving and not borders(faction_key, region) then
 		factor = factor * (1 - config.enclave_malus);
+		burden = burden + config.enclave_burden;
 		parts.enclave = -config.enclave_malus;
+		parts.enclave_burden = config.enclave_burden;
 	end;
 
 	local share = region:majority_religion_percentage() / 100;
 	local religion = config.religion_factor * share;
-	if region:majority_religion() ~= faction:state_religion() then religion = -religion end;
+	local same_religion = region:majority_religion() == faction:state_religion();
+	if not same_religion then religion = -religion end;
 	factor = factor * (1 + religion);
 	parts.religion = religion;
 
 	local order = region:public_order();
 	if order < 0 then
-		local unrest = math.max(order * config.unrest_per_point, config.unrest_floor - 1);
-		factor = factor * (1 + unrest);
-		parts.unrest = unrest;
+		parts.unrest_burden = -order * config.unrest_burden_per_point;
+		burden = burden + parts.unrest_burden;
 	end;
 
-	local total = base * factor;
+	local total = positive * factor + loss - burden;
 	parts.factor = factor;
+
+	if giving and total > 0 then
+		local reluctance = config.cession_reluctance;
+		if not same_religion then reluctance = reluctance - config.reluctance_other_religion end;
+		total = total * reluctance;
+		parts.reluctance = reluctance;
+		if other_key then
+			local lever, reason = leverage(region, faction, world:faction_by_key(other_key));
+			if reason then
+				total = total * lever;
+				parts.leverage = lever;
+				parts.leverage_by = reason;
+			end;
+		end;
+	end;
+
 	return math.floor(total + 0.5), parts;
 end;
 
