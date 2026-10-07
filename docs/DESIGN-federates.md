@@ -62,7 +62,9 @@ army keeps the units). Step 2, a dilemma "pay X gold or refuse", is for v2.
 
 ## Decisions (2026-10-07)
 
-1. UI: option A, a federates line in the region panel.
+1. UI: its own entry in "Add Offer/Demand", **"Region for Troops"** (changed 2026-10-07 after trying the federates row
+   in the region panel, which was reverted). It opens the region panel in troops mode: your regions on the left, their
+   warriors on the right.
 2. When: when you give regions (land for service); treaties can be in the same deal.
 3. Units: a mix of the AI's own units, no elite ones (the most expensive quarter of its unit types; changed
    2026-10-07 after the ERE offered its Scholae).
@@ -105,11 +107,13 @@ of their warriors when the deal is made.
    free slots), the units and their cost (budget 80 % of the regions' value for the AI, limited by the free slots).
    Units: that people's own levy pool units (`faction_to_mercenary_set_junctions`, through a TWASE DB getter) where it
    has one, else copies of its land units; no elite ones. Done for the copies.
-2. **TWASE, the panel:** a "Federates: N units" row at the top of the demand list (made with the engine's row
-   template, so it ticks like a region), active only when you give regions and a general is there; otherwise it
-   shows why not.
+2. **TWASE, the panel:** done (2026-10-07). A second button for the region action, "Region for Troops", in the
+   "Add Offer/Demand" list (a copy of the region action's entry, so the engine makes and lays out the button); its
+   click opens the region panel in troops mode: "Cede Region" (your regions) on the left, "Their Warriors" on the
+   right (the units, or why none), updated as you tick. OK puts the ticked regions in the deal and remembers the
+   deal's region term as for troops.
 3. **TWASE, score and deal list:** the units' recruitment cost counts like the AI paying that much gold (the same
-   mirror as regions); the deal list shows "+ federates (N units)" under your demands.
+   mirror as regions); the deal list shows the term as "Region for Troops" with the units.
 4. **On acceptance:** after the transfer the mod adds the units to the army (`add_unit_to_force`) and saves the foedus
    (one per faction at a time).
 5. **Loyalty:** only if the native tributary relationship isn't enough (it already breaks away on its own).
