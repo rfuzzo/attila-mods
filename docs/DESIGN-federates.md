@@ -97,6 +97,44 @@ foedus can be: cede land + "become our tributary" in one native deal; the game t
 relationship (including its tendency to break away). **Decided 2026-10-07: a foedus is native, land +
 tributary in one deal**; our free contingent comes on top.
 
+## Willingness: who becomes your federates (draft for review, 2026-10-07)
+
+Decided 2026-10-07: the units cost the AI nothing in the deal score (their number already follows from the land's
+value). What decides is whether a people is willing to become federates at all. The precedents: Goths 332 (after
+their defeat by Constantine), Goths 382 (after Adrianople, at war, unbeaten but worn out), Visigoths 418 (starved by
+Constantius' blockade), Vandals 435 (after their conquests in Africa), Burgundians 443 (after their defeat in 436).
+What they share: peoples, not states; under pressure (landless, hungry, defeated or exhausted); facing a stronger
+partner. War is often the occasion, not the barrier. No great power became anyone's federates.
+
+Proposal: the troops term adds a **willingness** W to the deal score (in the game's score points, where ±4 is the
+likelihood band), instead of a cost for the units. The land itself is valued as before.
+
+| Factor | W | Source |
+|---|---|---|
+| a state, not a people (Roman or Eastern culture) | −30, effectively never | `faction:culture()` |
+| landless: a horde | +8 | `is_horde()` |
+| little land: 1–2 regions / 3–5 / more | +4 / 0 / −4 | `region_list()` |
+| hungry (food shortage) | +4 | `has_food_shortage()` |
+| broke (losing money) | +2 | `losing_money()` |
+| your strength over theirs (units in armies): ≥ 3× / ≥ 1.5× / below 1× | +4 / +2 / −6 | `military_force_list()` |
+| at war with you: you're far stronger (≥ 3×) / otherwise | +2 (a peace settlement) / −6 (unbeaten enemies refuse) | `at_war_with()` |
+| attitude towards you | ± attitude / 25, at most ± 4 | `twase.faction_attitude` |
+| allied with you | +2 | `allied_with()` |
+
+Examples: the Visigoths as a horde at war with a far stronger Rome, hungry: 8 + 4 + 4 + 2 + attitude ≈ +16, they
+accept even a poor strip of land. The Franks with 4 regions, at peace, Rome 2× stronger: 0 + 2 + attitude ≈ +2,
+they want good land. The ERE: −30, never.
+
+Questions:
+
+1. Should Roman and Eastern factions be excluded entirely (no troops entry), or just very unwilling?
+2. At war: is "far stronger" the right condition for a foedus as a peace settlement, or should a war always make it
+   harder?
+3. The tributary status (the native levy) was meant to come with the foedus in the same deal. With W, should the
+   troops term imply it (the deal makes them your tributary), or stay a separate native term you add (and the AI
+   scores natively)?
+4. The numbers as a start?
+
 ## Implementation plan
 
 Decided 2026-10-07: a foedus is a native deal: you cede land and demand that the people becomes your **tributary**.
