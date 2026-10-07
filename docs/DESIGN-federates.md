@@ -84,11 +84,24 @@ The recruitment panel offers it when one of its sources is a horde faction (`0x1
 Vanilla's "Gift Region" to a horde is the settlement of a people on your land (the 382 / 418 foedera); after it, the
 levy ends. That's where our federates can continue CA's idea.
 
+### The levy system
+
+The horde levy is one source of a wider native **levy** (`LEVY_MERCENARY_MANAGER`, `LEVY_MERCENARY_POOL`, command
+`CCQ_RECRUIT_LEVY_MERCENARY_UNIT`). The recruitment panel offers "Levy from tributary" (client state), "Levy from
+puppet state" and "Recruit from Horde"; effects like `mercenary_levy_units_per_region_mod` (the Sassanid "levies
+from vassals" trait) and `att_effect_force_all_campaign_recruitment_cost_vassal_levy` tune it, and the Western Roman
+Empire has an edict `att_edict_western_rome_levy_foederati`. Tributary and puppet status are native deal terms, so a
+foedus can be: cede land + "become our tributary" in one native deal; the game then provides the ongoing levy and the
+relationship (including its tendency to break away). To decide (2026-10-07).
+
 ## Implementation plan
 
+Decided 2026-10-07: a free **contingent** when the deal is made, then an ongoing **levy** while the foedus lasts.
+
 1. **Lua, the offer:** for the regions you give, the negotiating army (your general in or next to one of them, most
-   free slots), the units (copies of the AI's land units, a mix with at most a few elite ones) and their cost
-   (budget 80 % of the regions' value for the AI, limited by the free slots). TWASE asks the mod through a handler.
+   free slots), the units and their cost (budget 80 % of the regions' value for the AI, limited by the free slots).
+   Units: that people's own pool units (`faction_to_mercenary_set_junctions`, through a TWASE DB getter) where it has
+   a pool, else copies of its land units; no elite ones. Done for the copies.
 2. **TWASE, the panel:** a "Federates: N units" row at the top of the demand list (made with the engine's row
    template, so it ticks like a region), active only when you give regions and a general is there; otherwise it
    shows why not.
@@ -96,7 +109,10 @@ levy ends. That's where our federates can continue CA's idea.
    mirror as regions); the deal list shows "+ federates (N units)" under your demands.
 4. **On acceptance:** after the transfer the mod adds the units to the army (`add_unit_to_force`) and saves the foedus
    (one per faction at a time).
-5. **Loyalty v1:** grumbling (morale malus bundle) and uprising (`force_rebellion_in_region`).
+5. **The levy:** while the foedus lasts, your armies in or next to the ceded land can levy from that people's pool
+   like from a friendly horde (TWASE: the recruitment sources count a foedus partner like a horde).
+6. **Loyalty v1:** grumbling (morale malus bundle) and uprising (`force_rebellion_in_region`); an uprising ends the
+   foedus and the levy.
 
 ## The original questions
 
