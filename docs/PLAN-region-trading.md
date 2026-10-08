@@ -1,6 +1,11 @@
 # Region trading – plan
 
-Status: 2026-10-07, Phase 5. Native region deals (TWASE branch `region-trading` widens the engine's Gift Region): give, demand and swap several regions in one deal, valued in the AI's own deal score, at peace and in peace talks, governors protected on transfer; all tested in game. Next: the AI's own proposals and thread safety (longer play test), cleanup (dead Lua panel code, a real TWASE switch, design doc), value model (burden, army leverage), federates, then packaging (names, the demand list's background, mod manager).
+Status: 2026-10-07, Phase 5. Built and tested in game (TWASE branch `region-trading`, the `region_trading` mod, the `region_trading_ui` pack):
+- native region deals: give, demand and swap regions, valued in the AI's own deal score (value model with burdens, army leverage, reluctance), at peace and in peace talks, governors protected; see [the design](DESIGN-region-trading.md) and [the value](DESIGN-region-value.md)
+- "Region for Troops" (federates): land + peace / tributary + a new army of their warriors, decided by the AI's willingness; see [federates](DESIGN-federates.md)
+- the panel's names and the demand list's background in our pack; `tools/play.sh` / `play-latest.command` for the dev loop
+
+What's left, in order: federates for hordes and loyalty (check the game's army integrity first), a longer play test (the AI's own proposals, crashes, calibration), packaging (one pack, mod manager, DLC campaigns, merging the TWASE branch), the wiki.
 
 ## Goal
 

@@ -1,6 +1,6 @@
 # Attila UI layout files
 
-Status: **decoder, encoder and a YAML text form done for versions 92 to 99** (`tools/twpack/src/uic.rs`), lossless on all 1969 such layouts in the game, Fireforged and RTR. Not done: a viewer.
+Status: **decoder, encoder and a YAML text form done for versions 92 to 99** (`tools/twpack/src/uic.rs`), lossless on all 1969 such layouts in the game, Fireforged and RTR. First slice of a viewer: `ui render`.
 
 ## What they are
 
@@ -35,10 +35,24 @@ twpack ui check <files/folders>      # binary round trip, text round trip (with 
 twpack ui tree <file> [-v]           # outline: name, size @ offset, text, engine; -v adds states / images / anims
 twpack ui export <file|folder> [-o out] [--no-uids]   # YAML; a folder is mirrored to <out>/<path>.uic.yml
 twpack ui import <x.uic.yml|folder> -o <out>          # back to binary layouts
+twpack ui render <layout> -o <dir> [--only name] [--state hover] [--show-hidden] [--pack p.pack ...] [--scale 1.5]
 twpack build <mod folder> -o x.pack                   # also turns every *.uic.yml into its binary layout (path without .uic.yml)
 ```
 
 Edit loop: `twpack ui export extracted/game/data/ui/"campaign ui"/regions_dropdown --no-uids -o mods/<mod>/ui/"campaign ui"/regions_dropdown.uic.yml`, edit, `twpack build`. (`tools/deploy.sh` copies loose files, so a `.uic.yml` needs `twpack ui import` first; not wired up yet.) Verified end to end: edited text and a new component without ids, built into a pack, extracted, checked.
+
+## Viewer (`twpack ui render`)
+
+Writes `<dir>/index.html` plus the skin images the page uses, taken from the game's `data.pack` and the DLC packs (`--pack` to use others, e.g. `region_trading_ui.pack`). Open it in a browser (a local `python3 -m http.server` if the viewer won't open `file://`). About 0.4 s for a layout. `--only trade_regions` renders just that component (the first with the name), `--show-hidden` also draws components whose `visible` flag is off (dashed outline), `--state hover` shows that state wherever a component has it.
+
+- **Drawn:** a box per component at its design-size `offset`, sized by the shown state's `bounds`, clipped if `clip_children`; each state's image metrics (tiled, stretched, or nine-patch from `margin`, opacity from the colour's alpha, flips); the state's text with size, colour, alignment and `text_offset`; the page covers everything drawn (title plaques stick out above their panel).
+- **Findings that came out of it:**
+  - `offset` is the position at the design size. `docking` (1 to 9: top left .. bottom right, 3x3) plus `dock_offset` gives the same position in about 94% of components (`anchor(docking, parent size, own size) + dock_offset`; centre rounding varies by one pixel), the dock only matters when the parent is resized.
+  - A lower `priority` is in front: the parchment has 12, the lists 0, a title 45 in front of its plaque 50.
+  - `colour` is RGBA, alpha last (`ffffff00` is transparent).
+- **Validated** against in-game screenshots of the `trade_regions` panel: plaque, parchment, lists with their backgrounds and scrollbars, buttons and titles come out where the game has them.
+- **Not shown:** anything the game or a script does at run time (the side by side lists of the region trade panel are placed by TWASE, the layout has them on top of each other), fonts (a serif stands in), font colours from the font categories (`fontcategories.fc`: titles come out in the state's own colour), colour tints, localised text (the layout's literal text is shown), animations, other screen sizes, text that is set from script, images the game fills in (dotted outline), `3D_window`s.
+- **Ideas:** a state switcher in the page, `--screen WxH` to place components by their docking, tooltips, loc lookup for text, an index page for a whole folder.
 
 ## Sources
 

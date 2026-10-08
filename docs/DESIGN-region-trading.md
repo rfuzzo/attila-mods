@@ -1,6 +1,6 @@
 # Region trading – design
 
-Updated 2026-10-07 for the native approach. Background: [`ANALYSIS-region-trading.md`](ANALYSIS-region-trading.md).
+Updated 2026-10-07 (evening) for the native approach. Background: [`ANALYSIS-region-trading.md`](ANALYSIS-region-trading.md).
 Parts with their own docs: [the region value](DESIGN-region-value.md) and [federates](DESIGN-federates.md) (both
 drafts for review).
 
@@ -27,7 +27,7 @@ history (until commit `4d9163d`).
 | Topic | Decision |
 |---|---|
 | Partners | any settled faction (neither side a horde); the AI decides by its own deal score |
-| When | at peace and in peace negotiations during a war ("region for peace", decided 2026-10-04) |
+| When | at peace and in peace negotiations during a war ("region for peace", decided 2026-10-04); at war the region entries appear once peace is in the deal (2026-10-07) |
 | What | give regions, demand regions, both in one deal (swaps), together with any other terms |
 | Value | a region is worth gold to the AI (income, buildings, province, religion, unrest); it may be negative, a burden. See [the region value](DESIGN-region-value.md) |
 | Troops | federates, our own addition to native deals. See [federates](DESIGN-federates.md) |
@@ -62,13 +62,16 @@ scale are interpolated. Details and open proposals: [the region value](DESIGN-re
 
 ## UI (the native panel, extended by TWASE)
 
-- **Entry:** "Gift Region" in the diplomacy's "Add Offer/Demand" list (rename to "Trade Regions" at packaging).
+- **Entries:** "Trade Regions" (vanilla's "Gift Region", renamed in our loc) and "Region for Troops" (federates,
+  see [federates](DESIGN-federates.md)) in the diplomacy's "Add Offer/Demand" list. At war both only appear once
+  peace is in the deal.
 - **Panel:** two lists side by side, your regions to give and theirs to demand; tick any number in both. Ticking a
   region pans the map to it. Regions already in the deal are ticked when the panel opens again.
 - **Deal list:** each column shows its own regions. The X removes the whole region term (one action in the engine);
   to drop one side, reopen the panel and untick it.
 - **Likelihood:** the game's, with the deal score in the tooltip (TWASE's existing tweak).
-- **Open:** the demand list lacks the offers list's background (vanilla layout, fix in our pack), the names.
+- **Layout:** the demand list lacked the offers list's background (vanilla's `list_clip` has no image, and its `list_box` background is transparent, `ffffff00`). Fixed in `mods/region_trading_ui/ui/campaign ui/diplomacy_hud.uic.yml` (the vanilla layout as text, see [UI-FORMAT](UI-FORMAT.md); the diff against `twpack ui export` of the vanilla file is the 12 lines that add the parchment row image to `list_demands/list_clip`). Loose layout files are ignored by the game (tested), so it ships as a pack: `region_trading_ui.pack`, built by `tools/deploy.sh region_trading_ui` (marker file `.build-pack`) and listed in `tools/mod_list.txt`.
+- **Names:** `mods/region_trading_ui/text/db/________region_trading.loc.tsv` (in the same pack) renames the entry and the panel to "Trade Regions", the lists to "Give Regions" / "Demand Regions", the deal list label to "Regions:", rewrites the entry's tooltip (vanilla's is about migrating tribes only) and gives the two list titles their own tooltips (the layout's `region_trade_give_Tooltip` / `region_trade_demand_Tooltip`; vanilla's `offers_title_Tooltip_2b0037p` is shared with three other panels). The file name has more leading underscores than Fireforged's `_diplomacy_strings` / `_uied_component_texts` copies so that it is read first (the same convention; confirmed in game 2026-10-07).
 
 ## Execution
 
@@ -82,9 +85,9 @@ scale are interpolated. Details and open proposals: [the region value](DESIGN-re
 | Piece | Status |
 |---|---|
 | `twase.faction_attitude`, `twase.region_wealth`, `twase.region_province`, `twase.building_level`, `twase.unit`, `twase.localise` | done |
-| `twase.enable_region_trading{ value = fn, transfer = fn }`: switches the native deals on with the mod's value and transfer handlers | done |
+| `twase.enable_region_trading{ value, transfer, federates, willingness, foedus }`: switches the native deals on with the mod's handlers | done |
 | wider rules, two-list panel with multiple ticks, deal list text, region value in the deal score, transfer handler | done (branch `region-trading`) |
-| federates in the panel and the score | to design |
+| Region for Troops: second entry, troops mode of the panel, peace / tributary terms added, willingness in the score, foedus handler, `twase.levy_pool` | done (branch `region-trading`) |
 | removing single units from an army (federate desertion) | later |
 
 ## Switching off Fireforged's `maga`
@@ -94,7 +97,12 @@ RTR's region trading is off and their files stay untouched (8 listeners, tested)
 
 ## Open points
 
-- the value proposals and federates: see their docs
+- federates: hordes, loyalty, the army's name, ending a foedus (see [federates](DESIGN-federates.md))
+- the value model: calibration in play; extra reluctance for province capitals (needs a TWASE province capital check);
+  your own value of a region in the panel (postponed)
 - the AI's own proposals with regions, and whether its evaluation during its turn is safe (long play test)
-- packaging: the names, the demand list's background, a pack for the mod manager, the DLC campaigns
+- the X in the deal list removes the whole region term (one engine action)
+- the faction stats correction from RTR's `clanPanel` (traded regions don't count as "lost")
+- packaging: one pack for the mod (Lua + `region_trading_ui`), the mod manager, the DLC campaigns, merging TWASE's
+  `region-trading` branch, removing the temporary fallback for the old TWASE API in `init.lua`
 - later: the AI's reasons in the panel; AI-initiated offers
