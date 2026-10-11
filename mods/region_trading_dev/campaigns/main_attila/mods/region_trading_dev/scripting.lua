@@ -54,10 +54,10 @@ local function click(id, depth)
 	if c then c:SimulateClick() end;
 end;
 
-local function open_with_ai()
+local function open_with_ai(ai)
 	return {
 		function() click("button_diplomacy", 8) end,
-		function() click("faction_row_entry_" .. AI) end,
+		function() click("faction_row_entry_" .. (ai or AI)) end,
 		function() click("button_ok") end,
 	};
 end;
@@ -78,10 +78,82 @@ end;
 
 -- "panel": open the native region panel with the AI; "transfer": the deal's transfer, for the minimap (needs
 -- [dev] lua_dev_functions = true in TWASE/config.ini)
-local MODE = "spawn";
+local MODE = "teleport";
 
 local steps = {};
-if MODE == "federates" then
+if MODE == "teleport" then
+	-- a horde's army in one of your regions (vanilla's Gift Region needs one there), then the Add Offer/Demand list with
+	-- that horde: is Gift Region / Region for Troops / Make Tributary State offered? The campaign has no teleport, so a
+	-- copy of the horde's army is spawned there (create_force).
+	local HORDE = nil;            -- a faction key, or nil: the first horde with an army in your diplomacy list
+	local TARGET_REGION = nil;    -- one of your regions, or nil: the first that isn't your capital
+	local horde;
+	local function field_force(faction)
+		local forces = faction:military_force_list();
+		for i = 0, forces:num_items() - 1 do
+			local f = forces:item_at(i);
+			if f:is_army() and f:has_general() then return f end;
+		end;
+	end;
+	table.insert(steps, function() click("button_diplomacy", 8) end);
+	table.insert(steps, function()
+		local world, player = rt.world(), rt.cm():get_local_faction();
+		local factions = world:faction_list();
+		for i = 0, factions:num_items() - 1 do
+			local f = factions:item_at(i);
+			if f:name() ~= player and f:is_horde() and field_force(f) then
+				local listed = find_id(kit.root(), "faction_row_entry_" .. f:name()) ~= nil;
+				log("TELEPORT horde %s: %d forces, at war with you %s, in the diplomacy list %s", f:name(),
+					f:military_force_list():num_items(), tostring(f:at_war_with(world:faction_by_key(player))), tostring(listed));
+				if not horde and (HORDE == f:name() or (not HORDE and listed)) then horde = f:name() end;
+			end;
+		end;
+		if not horde then log("TELEPORT no horde with an army in the diplomacy list"); return end;
+
+		local own = world:faction_by_key(player);
+		local target = TARGET_REGION;
+		local regions = own:region_list();
+		for i = 0, regions:num_items() - 1 do
+			local r = regions:item_at(i);
+			if not target and not (own:has_home_region() and own:home_region():name() == r:name()) then target = r:name() end;
+		end;
+		local units = {};
+		local list = field_force(world:faction_by_key(horde)):unit_list();
+		for i = 0, math.min(list:num_items(), 6) - 1 do
+			local u = list:item_at(i);
+			if not u:has_unit_commander() then table.insert(units, u:unit_key()) end;
+		end;
+		local settlement = world:region_manager():region_by_key(target):settlement();
+		local x, y = settlement:logical_position_x() + 2, settlement:logical_position_y() + 2;
+		rt.cm():create_force(horde, table.concat(units, ","), target, x, y, "region_trading_dev_horde", true, function(cqi)
+			local ok, where = pcall(function()
+				local c = rt.cm():model():character_for_command_queue_index(cqi);
+				return c:has_region() and c:region():name() or "?";
+			end);
+			log("TELEPORT %s's new army (general %s) stands in %s", horde, tostring(cqi), tostring(where));
+		end);
+		log("TELEPORT spawning %s's army in %s (%d, %d): %s", horde, target, x, y, table.concat(units, ", "));
+	end);
+	table.insert(steps, function() if horde then click("faction_row_entry_" .. horde) end end);
+	table.insert(steps, function() click("button_ok") end);
+	local function list_actions(tag)
+		local any = find_id(kit.root(), "diplomac_action_possible_12") or find_id(kit.root(), "diplomac_action_possible_9");
+		local parent = any and UIComponent(any:Parent());
+		for i = 0, (parent and parent:ChildCount() or 0) - 1 do
+			local child = UIComponent(parent:Find(i));
+			local label = child:Find("row_tx");
+			log("ACTION %s %s = %s", tag, child:Id(), label and UIComponent(label):GetStateText() or "?");
+		end;
+		if twase.dev_diplomacy_actions then log("ACTIONS %s type:side:available:blocked %s", tag, tostring(twase.dev_diplomacy_actions())) end;
+	end;
+	table.insert(steps, function() click("add_offer_button") end);
+	table.insert(steps, function() list_actions("before") end);
+	-- at war: peace first, then the list again
+	table.insert(steps, function() click("diplomac_action_possible_12") end);
+	table.insert(steps, function() click("add_offer_button") end);
+	table.insert(steps, function() list_actions("after peace") end);
+	table.insert(steps, function() log("SHOT horde") end);
+elseif MODE == "federates" then
 	-- federates for Salona from a faction without a levy pool (the ERE) and from peoples with one
 	for _, ai in ipairs({ "att_fact_quadi", "att_fact_visigothi" }) do
 		table.insert(steps, function()
@@ -142,8 +214,8 @@ elseif MODE == "spawn" then
 	end;
 	table.insert(steps, function()
 		log("SPAWN armies before: %d", count());
-		region_trading.federates.on_deal("before", "att_fact_quadi", "att_fact_western_roman_empire", "att_reg_pannonia_savaria");
-		region_trading.federates.on_deal("after", "att_fact_quadi", "att_fact_western_roman_empire", "att_reg_pannonia_savaria");
+		region_trading.federates.on_deal("before", "att_fact_quadi", "att_fact_western_roman_empire", true, "att_reg_pannonia_savaria");
+		region_trading.federates.on_deal("after", "att_fact_quadi", "att_fact_western_roman_empire", true, "att_reg_pannonia_savaria");
 	end);
 	table.insert(steps, function() log("SPAWN armies after: %d", count()) end);
 	table.insert(steps, function() log("SHOT spawn") end);
