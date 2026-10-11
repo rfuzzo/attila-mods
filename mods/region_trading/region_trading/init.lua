@@ -59,8 +59,9 @@ local handlers = {
 		rt.log("willingness of %s to serve %s: %+.1f (%s)", ai_key, player_key, points, table.concat(out, ", "));
 		return points;
 	end,
-	foedus = function(phase, ai_key, player_key, ...)
-		local ok, err = pcall(federates.on_deal, phase, ai_key, player_key, ...);
+	-- tributary: whether the deal has the native tributary term
+	foedus = function(phase, ai_key, player_key, tributary, ...)
+		local ok, err = pcall(federates.on_deal, phase, ai_key, player_key, tributary, ...);
 		if not ok then rt.log("foedus %s with %s failed: %s", phase, tostring(ai_key), tostring(err)) end;
 	end,
 };

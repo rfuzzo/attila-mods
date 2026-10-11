@@ -24,6 +24,9 @@ A foedus is **land + a contingent + a bond**, built from native parts:
   becomes your tributary; at war the engine offers it once peace is in the deal). The game executes them on
   acceptance, no script calls. The tributary status gives the game's ongoing levy ("Levy from tributary", in the
   tributary's regions with their buildings, not in the ceded land).
+- **Landless peoples** (e.g. the Blemmyes, no regions, not a horde): the engine offers "Make Tributary State" only to a
+  faction with land, so their deal lacks it. TWASE tells the mod whether the deal has the term; if not, the mod makes
+  them your tributary once the land is theirs (`cm:force_make_vassal(player, ai)`, after the transfer).
 - **At war** the region entries (Trade Regions and Region for Troops) only appear once peace is in the deal.
 - **The deal list** labels the term "Region for Troops".
 
@@ -72,7 +75,15 @@ if several), with `cm:create_force` (the game generates the general and finds a 
 
 ## Open
 
-- **Hordes:** the troops entry for hordes (they keep vanilla's rules today).
+- **Hordes:** the troops entry for hordes (they keep vanilla's rules today). Plan (2026-10-11): with a horde, only
+  "Region for Troops" (no Trade Regions), for regions where the horde's army stands (vanilla's rule), the land not
+  counted as an enclave for a landless receiver. Found 2026-10-11 (WRE 367 AD, dev harness mode `teleport`, a copy of
+  the horde's army spawned in Salona with `create_force`; the campaign has no teleport): neither the Attacotti (at war,
+  also after peace in the deal) nor the Huns (at peace) get vanilla's "Gift Region" (action 6 not available) or "Make
+  Tributary State" (25 not available). Open: why vanilla's region rule doesn't list Salona (an army spawned the same
+  turn not counted yet? a garrisoned settlement?); try at the next turn, and a region without an army of yours.
+- **Check in play:** the Blemmyes' foedus: does `force_make_vassal(player, ai)` make them your *tributary* (not a
+  puppet), and in that argument order?
 - **Loyalty v1** (decided 2026-10-04: grumbling and uprising, on the federate army). The game already has an army
   **integrity** with mutinies (the new army showed "Obedient 50, −6 per turn, mutiny in 9 turns": faction −5, politics
   −1, foreign soil −1, friendly territory +1); check whether that's enough, or how our loyalty fits with it.
