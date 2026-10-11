@@ -25,8 +25,10 @@ A foedus is **land + a contingent + a bond**, built from native parts:
   acceptance, no script calls. The tributary status gives the game's ongoing levy ("Levy from tributary", in the
   tributary's regions with their buildings, not in the ceded land).
 - **Landless peoples** (e.g. the Blemmyes, no regions, not a horde): the engine offers "Make Tributary State" only to a
-  faction with land, so their deal lacks it. TWASE tells the mod whether the deal has the term; if not, the mod makes
-  them your tributary once the land is theirs (`cm:force_make_vassal(player, ai)`, after the transfer).
+  faction with land, so TWASE adds the term for a landless AI anyway (unless blocked, e.g. by `force_diplomacy`); to
+  test 2026-10-11. Fallback: TWASE tells the mod whether the deal has the term; if not, the mod binds them after the
+  transfer with `cm:force_make_vassal(player, ai)`, which makes a **puppet** (tested 2026-10-11, ERE → Blemmyes); the
+  game's scripts have no call for a tributary.
 - **At war** the region entries (Trade Regions and Region for Troops) only appear once peace is in the deal.
 - **The deal list** labels the term "Region for Troops".
 
@@ -80,10 +82,11 @@ if several), with `cm:create_force` (the game generates the general and finds a 
   counted as an enclave for a landless receiver. Found 2026-10-11 (WRE 367 AD, dev harness mode `teleport`, a copy of
   the horde's army spawned in Salona with `create_force`; the campaign has no teleport): neither the Attacotti (at war,
   also after peace in the deal) nor the Huns (at peace) get vanilla's "Gift Region" (action 6 not available) or "Make
-  Tributary State" (25 not available). Open: why vanilla's region rule doesn't list Salona (an army spawned the same
-  turn not counted yet? a garrisoned settlement?); try at the next turn, and a region without an army of yours.
-- **Check in play:** the Blemmyes' foedus: does `force_make_vassal(player, ai)` make them your *tributary* (not a
-  puppet), and in that argument order?
+  Tributary State" (25 not available). Why (decoded 2026-10-11, `0x1025c7a6c`): vanilla's Gift Region to a horde
+  needs a horde that **can own land** (FACTION `+0x1751`, also required by `transfer_region_to_faction`; the Huns can't
+  settle), **no war** between you (the relation field `at_war_with` reads), and its army in one of your regions (not
+  the capital, no garrisoned army). So the Attacotti (at war) and the Huns (can't settle) are vanilla's design; our
+  horde rule should keep "can own land".
 - **Loyalty v1** (decided 2026-10-04: grumbling and uprising, on the federate army). The game already has an army
   **integrity** with mutinies (the new army showed "Obedient 50, −6 per turn, mutiny in 9 turns": faction −5, politics
   −1, foreign soil −1, friendly territory +1); check whether that's enough, or how our loyalty fits with it.
