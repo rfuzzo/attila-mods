@@ -5,7 +5,7 @@ Status: 2026-10-12, Phase 5. Built and tested in game (TWASE `main`, merged 2026
 - "Region for Troops" (federates): land + peace / tributary + a new army of their warriors, decided by the AI's willingness; see [federates](DESIGN-federates.md)
 - the panel's names and the demand list's background in our pack; `tools/play.sh` / `play-latest.command` for the dev loop
 
-What's left, in order: loyalty (check the game's army integrity first), a longer play test (the AI's own proposals, crashes, calibration), packaging (the DLC campaigns), the wiki.
+What's left, in order: loyalty (check the game's army integrity first), a longer play test (the AI's own proposals, crashes, calibration), packaging (the DLC campaigns; local packs in Feral's mod manager, see TWASE docs/addresses.md: today only through TWASE/local_mods.txt), the wiki.
 
 ## Goal
 
