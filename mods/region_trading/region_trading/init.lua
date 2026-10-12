@@ -18,7 +18,7 @@ region_trading = { explain = explain, federates = federates, rt = rt, value = va
 -- The engine's region deals (its "Gift Region", widened by TWASE): the AI values a region like this much gold, and
 -- governors survive the transfer of their province capital.
 local handlers = {
-	-- other_key: the other side of the deal (nil from TWASE builds before 2026-10-07)
+	-- other_key: the other side of the deal
 	value = function(region_key, faction_key, other_key)
 		local ok, gold, parts = pcall(value.of, region_key, faction_key, other_key);
 		if not ok then
@@ -67,11 +67,6 @@ local handlers = {
 };
 if twase and twase.enable_region_trading then
 	twase.enable_region_trading(handlers);
-elseif twase and twase.dev_native_region_trading then
-	-- TEMPORARY (remove once nobody runs a TWASE build from before 2026-10-07): the earlier dev API
-	twase.dev_native_region_trading(true);
-	twase.set_region_value_handler(handlers.value);
-	if twase.set_region_transfer_handler then twase.set_region_transfer_handler(handlers.transfer) end;
 else
 	rt.log("needs TWASE with twase.enable_region_trading, region trading stays off");
 end;

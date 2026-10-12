@@ -1,6 +1,6 @@
 #!/bin/zsh
 # Start the game with TWASE straight into the main menu or a save, without Feral's launcher (the dev loop).
-# Deploys the region trading mod first (loose Lua) and its UI pack, so the game runs the repo's current files. The mods come from tools/mod_list.txt
+# Builds the region trading and Fireforged fixes packs first, so the game runs the repo's current files. The mods come from tools/mod_list.txt
 # (Feral, started without its launcher, sometimes enables none, and a modded save then crashes on load).
 # usage: tools/play.sh [--no-deploy] [--feral-mods] [--latest | --load <save name>]
 #   --latest       load the newest campaign save
@@ -44,7 +44,7 @@ fi
 
 if $deploy; then
   $repo/tools/deploy.sh region_trading
-  $repo/tools/deploy.sh region_trading_ui
+  $repo/tools/deploy.sh fireforged_fixes
 fi
 
 args=(--skip-launcher)

@@ -1,0 +1,1 @@
+Built into data/<mod>.pack by tools/deploy.sh. The Lua would also load as loose files; a pack is what Feral's mod list takes.

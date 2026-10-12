@@ -43,7 +43,7 @@ Edit loop: `twpack ui export extracted/game/data/ui/"campaign ui"/regions_dropdo
 
 ## Viewer (`twpack ui render`)
 
-Writes `<dir>/index.html` plus the skin images the page uses, taken from the game's `data.pack` and the DLC packs (`--pack` to use others, e.g. `region_trading_ui.pack`). Open it in a browser (a local `python3 -m http.server` if the viewer won't open `file://`). About 0.4 s for a layout. `--only trade_regions` renders just that component (the first with the name), `--show-hidden` also draws components whose `visible` flag is off (dashed outline), `--state hover` shows that state wherever a component has it.
+Writes `<dir>/index.html` plus the skin images the page uses, taken from the game's `data.pack` and the DLC packs (`--pack` to use others, e.g. `region_trading.pack`). Open it in a browser (a local `python3 -m http.server` if the viewer won't open `file://`). About 0.4 s for a layout. `--only trade_regions` renders just that component (the first with the name), `--show-hidden` also draws components whose `visible` flag is off (dashed outline), `--state hover` shows that state wherever a component has it.
 
 - **Drawn:** a box per component at its design-size `offset`, sized by the shown state's `bounds`, clipped if `clip_children`; each state's image metrics (tiled, stretched, or nine-patch from `margin`, opacity from the colour's alpha, flips); the state's text with size, colour, alignment and `text_offset`; the page covers everything drawn (title plaques stick out above their panel).
 - **Findings that came out of it:**
