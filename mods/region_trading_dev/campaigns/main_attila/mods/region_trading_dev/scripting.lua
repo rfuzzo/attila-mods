@@ -85,7 +85,8 @@ if MODE == "teleport" then
 	-- a horde's army in one of your regions (vanilla's Gift Region needs one there), then the Add Offer/Demand list with
 	-- that horde: is Gift Region / Region for Troops / Make Tributary State offered? The campaign has no teleport, so a
 	-- copy of the horde's army is spawned there (create_force).
-	local HORDE = nil;            -- a faction key, or nil: the first horde with an army in your diplomacy list
+	local HORDE = "attacoti";     -- a faction key, or nil: the first horde with an army in your diplomacy list
+	local SPAWN_ONLY = true;      -- only the army, then the diplomacy screen is yours (for a test by hand)
 	local TARGET_REGION = nil;    -- one of your regions, or nil: the first that isn't your capital
 	local horde;
 	local function field_force(faction)
@@ -95,14 +96,14 @@ if MODE == "teleport" then
 			if f:is_army() and f:has_general() then return f end;
 		end;
 	end;
-	table.insert(steps, function() click("button_diplomacy", 8) end);
+	if not SPAWN_ONLY then table.insert(steps, function() click("button_diplomacy", 8) end) end;
 	table.insert(steps, function()
 		local world, player = rt.world(), rt.cm():get_local_faction();
 		local factions = world:faction_list();
 		for i = 0, factions:num_items() - 1 do
 			local f = factions:item_at(i);
 			if f:name() ~= player and f:is_horde() and field_force(f) then
-				local listed = find_id(kit.root(), "faction_row_entry_" .. f:name()) ~= nil;
+				local listed = not SPAWN_ONLY and find_id(kit.root(), "faction_row_entry_" .. f:name()) ~= nil;
 				log("TELEPORT horde %s: %d forces, at war with you %s, in the diplomacy list %s", f:name(),
 					f:military_force_list():num_items(), tostring(f:at_war_with(world:faction_by_key(player))), tostring(listed));
 				if not horde and (HORDE == f:name() or (not HORDE and listed)) then horde = f:name() end;
@@ -134,25 +135,28 @@ if MODE == "teleport" then
 		end);
 		log("TELEPORT spawning %s's army in %s (%d, %d): %s", horde, target, x, y, table.concat(units, ", "));
 	end);
-	table.insert(steps, function() if horde then click("faction_row_entry_" .. horde) end end);
-	table.insert(steps, function() click("button_ok") end);
-	local function list_actions(tag)
-		local any = find_id(kit.root(), "diplomac_action_possible_12") or find_id(kit.root(), "diplomac_action_possible_9");
-		local parent = any and UIComponent(any:Parent());
-		for i = 0, (parent and parent:ChildCount() or 0) - 1 do
-			local child = UIComponent(parent:Find(i));
-			local label = child:Find("row_tx");
-			log("ACTION %s %s = %s", tag, child:Id(), label and UIComponent(label):GetStateText() or "?");
+	-- the diplomacy screen with the horde: its entries before and after peace
+	if not SPAWN_ONLY then
+		table.insert(steps, function() if horde then click("faction_row_entry_" .. horde) end end);
+		table.insert(steps, function() click("button_ok") end);
+		local function list_actions(tag)
+			local any = find_id(kit.root(), "diplomac_action_possible_12") or find_id(kit.root(), "diplomac_action_possible_9");
+			local parent = any and UIComponent(any:Parent());
+			for i = 0, (parent and parent:ChildCount() or 0) - 1 do
+				local child = UIComponent(parent:Find(i));
+				local label = child:Find("row_tx");
+				log("ACTION %s %s = %s", tag, child:Id(), label and UIComponent(label):GetStateText() or "?");
+			end;
+			if twase.dev_diplomacy_actions then log("ACTIONS %s type:side:available:blocked %s", tag, tostring(twase.dev_diplomacy_actions())) end;
 		end;
-		if twase.dev_diplomacy_actions then log("ACTIONS %s type:side:available:blocked %s", tag, tostring(twase.dev_diplomacy_actions())) end;
+		table.insert(steps, function() click("add_offer_button") end);
+		table.insert(steps, function() list_actions("before") end);
+		-- at war: peace first, then the list again
+		table.insert(steps, function() click("diplomac_action_possible_12") end);
+		table.insert(steps, function() click("add_offer_button") end);
+		table.insert(steps, function() list_actions("after peace") end);
+		table.insert(steps, function() log("SHOT horde") end);
 	end;
-	table.insert(steps, function() click("add_offer_button") end);
-	table.insert(steps, function() list_actions("before") end);
-	-- at war: peace first, then the list again
-	table.insert(steps, function() click("diplomac_action_possible_12") end);
-	table.insert(steps, function() click("add_offer_button") end);
-	table.insert(steps, function() list_actions("after peace") end);
-	table.insert(steps, function() log("SHOT horde") end);
 elseif MODE == "federates" then
 	-- federates for Salona from a faction without a levy pool (the ERE) and from peoples with one
 	for _, ai in ipairs({ "att_fact_quadi", "att_fact_visigothi" }) do
