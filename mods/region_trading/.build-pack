@@ -1,0 +1,1 @@
+Built into data/<mod>.pack by tools/deploy.sh (UI layouts do not load from loose files; the Lua would).

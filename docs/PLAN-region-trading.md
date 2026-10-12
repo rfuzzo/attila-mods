@@ -1,11 +1,11 @@
 # Region trading – plan
 
-Status: 2026-10-07, Phase 5. Built and tested in game (TWASE branch `region-trading`, the `region_trading` mod, the `region_trading_ui` pack):
+Status: 2026-10-07, Phase 5. Built and tested in game (TWASE branch `region-trading`, the `region_trading` mod, one pack `region_trading.pack`):
 - native region deals: give, demand and swap regions, valued in the AI's own deal score (value model with burdens, army leverage, reluctance), at peace and in peace talks, governors protected; see [the design](DESIGN-region-trading.md) and [the value](DESIGN-region-value.md)
 - "Region for Troops" (federates): land + peace / tributary + a new army of their warriors, decided by the AI's willingness; see [federates](DESIGN-federates.md)
 - the panel's names and the demand list's background in our pack; `tools/play.sh` / `play-latest.command` for the dev loop
 
-What's left, in order: loyalty (check the game's army integrity first), a longer play test (the AI's own proposals, crashes, calibration), packaging (one pack, mod manager, DLC campaigns, merging the TWASE branch), the wiki.
+What's left, in order: loyalty (check the game's army integrity first), a longer play test (the AI's own proposals, crashes, calibration), packaging (the DLC campaigns), the wiki.
 
 ## Goal
 
