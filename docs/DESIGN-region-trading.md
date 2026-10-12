@@ -42,7 +42,8 @@ history (until commit `4d9163d`).
   horde).
 - **Regions** either side can give: all but its capital and settlements with an army garrisoned in them (vanilla's
   rule; vanilla also only listed regions where the receiver's army stands).
-- Hordes keep the vanilla rules.
+- Hordes: vanilla's gift (Trade Regions, only regions where the horde's army stands) plus Region for Troops, also at
+  war once peace is in the deal (see [federates](DESIGN-federates.md#hordes)).
 
 ## Historical basis
 
