@@ -114,8 +114,10 @@ function value.of(region_key, faction_key, other_key)
 		parts.province_complete = config.province_complete_bonus;
 	end;
 
-	-- An enclave only matters for a new owner; the current owner borders itself trivially.
-	if not giving and not borders(faction_key, region) then
+	-- An enclave only matters for a new owner; the current owner borders itself trivially. For a landless people (a
+	-- horde settling, the Blemmyes) the land is all it has, not an outpost to defend.
+	local landless = rt.world():faction_by_key(faction_key):region_list():num_items() == 0;
+	if not giving and not landless and not borders(faction_key, region) then
 		factor = factor * (1 - config.enclave_malus);
 		burden = burden + config.enclave_burden;
 		parts.enclave = -config.enclave_malus;

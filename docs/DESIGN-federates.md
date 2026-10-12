@@ -32,6 +32,23 @@ A foedus is **land + a contingent + a bond**, built from native parts:
 - **At war** the region entries (Trade Regions and Region for Troops) only appear once peace is in the deal.
 - **The deal list** labels the term "Region for Troops".
 
+## Hordes
+
+Vanilla's "Gift Region" to a horde (decoded 2026-10-11, `0x1025c7a6c`) needs a horde that **can own land** (FACTION
+`+0x1751`, also required by `transfer_region_to_faction`; the Huns can't settle), **no war** between you, and its army in
+one of your regions (not the capital, no garrisoned army); only those regions can be given.
+
+With a horde that can own land (decided 2026-10-12):
+
+- **Trade Regions** stays vanilla's gift (vanilla's panel; a horde has no land to demand), also at war: the entries then
+  appear once peace is in the deal, as with everyone.
+- **Region for Troops** is added next to it, for the same regions (where its army stands).
+- The land isn't counted as an enclave for a landless receiver (`value.lua`): it's all the people has.
+- The bond: the tributary term, added as for any landless people.
+
+Tested 2026-10-12 (WRE 367 AD, dev harness mode `teleport`): the Attacotti, at war, army in Salona: after peace in the
+deal "Trade Regions" and "Region for Troops" are offered.
+
 ## The AI's decision: willingness
 
 The units cost the AI nothing in the score (their number follows from the land's value). In a deal for troops the
@@ -71,22 +88,15 @@ if several), with `cm:create_force` (the game generates the general and finds a 
 
 - Roman and Eastern factions are only very unwilling, not excluded.
 - The willingness alone decides for now; no part of the native peace / tributary score is kept.
-- Hordes: the troops entry should replace vanilla's "Gift Region" for hordes (settling a people as federates).
+- Hordes: the troops entry next to vanilla's "Gift Region" (renamed Trade Regions), not replacing it (2026-10-12: removing
+  it would only take away the player's freedom), also at war.
 - Dropped on the way: a federates row in the Gift Region panel (tried, reverted), units joining a general's army
   (federates fought as their own contingent, and it needed a general nearby), the units' cost in the score.
 
 ## Open
 
-- **Hordes:** the troops entry for hordes (they keep vanilla's rules today). Plan (2026-10-11): with a horde, only
-  "Region for Troops" (no Trade Regions), for regions where the horde's army stands (vanilla's rule), the land not
-  counted as an enclave for a landless receiver. Found 2026-10-11 (WRE 367 AD, dev harness mode `teleport`, a copy of
-  the horde's army spawned in Salona with `create_force`; the campaign has no teleport): neither the Attacotti (at war,
-  also after peace in the deal) nor the Huns (at peace) get vanilla's "Gift Region" (action 6 not available) or "Make
-  Tributary State" (25 not available). Why (decoded 2026-10-11, `0x1025c7a6c`): vanilla's Gift Region to a horde
-  needs a horde that **can own land** (FACTION `+0x1751`, also required by `transfer_region_to_faction`; the Huns can't
-  settle), **no war** between you (the relation field `at_war_with` reads), and its army in one of your regions (not
-  the capital, no garrisoned army). So the Attacotti (at war) and the Huns (can't settle) are vanilla's design; our
-  horde rule should keep "can own land".
+- **Hordes:** done 2026-10-12, see "Hordes" above. Open: a whole deal with a horde in play (does it settle, the
+  tributary term, the army).
 - **Loyalty v1** (decided 2026-10-04: grumbling and uprising, on the federate army). The game already has an army
   **integrity** with mutinies (the new army showed "Obedient 50, −6 per turn, mutiny in 9 turns": faction −5, politics
   −1, foreign soil −1, friendly territory +1); check whether that's enough, or how our loyalty fits with it.
