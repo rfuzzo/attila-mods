@@ -87,8 +87,8 @@ scale are interpolated. Details and open proposals: [the region value](DESIGN-re
 |---|---|
 | `twase.faction_attitude`, `twase.region_wealth`, `twase.region_province`, `twase.building_level`, `twase.unit`, `twase.localise` | done |
 | `twase.enable_region_trading{ value, transfer, federates, willingness, foedus }`: switches the native deals on with the mod's handlers | done |
-| wider rules, two-list panel with multiple ticks, deal list text, region value in the deal score, transfer handler | done (branch `region-trading`) |
-| Region for Troops: second entry, troops mode of the panel, peace / tributary terms added, willingness in the score, foedus handler, `twase.levy_pool` | done (branch `region-trading`) |
+| wider rules, two-list panel with multiple ticks, deal list text, region value in the deal score, transfer handler | done (TWASE `main`) |
+| Region for Troops: second entry, troops mode of the panel, peace / tributary terms added, willingness in the score, foedus handler, `twase.levy_pool` | done (TWASE `main`) |
 | removing single units from an army (federate desertion) | later |
 
 ## Switching off Fireforged's `maga`
