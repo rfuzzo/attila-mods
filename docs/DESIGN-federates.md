@@ -46,8 +46,9 @@ With a horde that can own land (decided 2026-10-12):
 - The land isn't counted as an enclave for a landless receiver (`value.lua`): it's all the people has.
 - The bond: the tributary term, added as for any landless people.
 
-Tested 2026-10-12 (WRE 367 AD, dev harness mode `teleport`): the Attacotti, at war, army in Salona: after peace in the
-deal "Trade Regions" and "Region for Troops" are offered.
+Tested 2026-10-12 (WRE 367 AD, dev harness mode `teleport`, the Attacotti, at war, army in Salona): after peace in the
+deal "Trade Regions" and "Region for Troops" are offered; a whole deal for troops (peace, Salona, the tributary term)
+went through, they became your tributary and their warriors your new army.
 
 ## The AI's decision: willingness
 
@@ -95,8 +96,6 @@ if several), with `cm:create_force` (the game generates the general and finds a 
 
 ## Open
 
-- **Hordes:** done 2026-10-12, see "Hordes" above. Open: a whole deal with a horde in play (does it settle, the
-  tributary term, the army).
 - **Loyalty v1** (decided 2026-10-04: grumbling and uprising, on the federate army). The game already has an army
   **integrity** with mutinies (the new army showed "Obedient 50, −6 per turn, mutiny in 9 turns": faction −5, politics
   −1, foreign soil −1, friendly territory +1); check whether that's enough, or how our loyalty fits with it.
