@@ -25,9 +25,9 @@ A foedus is **land + a contingent + a bond**, built from native parts:
   acceptance, no script calls. The tributary status gives the game's ongoing levy ("Levy from tributary", in the
   tributary's regions with their buildings, not in the ceded land).
 - **Landless peoples** (e.g. the Blemmyes, no regions, not a horde): the engine offers "Make Tributary State" only to a
-  faction with land, so TWASE adds the term for a landless AI anyway (unless blocked, e.g. by `force_diplomacy`); to
-  test 2026-10-11. Fallback: TWASE tells the mod whether the deal has the term; if not, the mod binds them after the
-  transfer with `cm:force_make_vassal(player, ai)`, which makes a **puppet** (tested 2026-10-11, ERE → Blemmyes); the
+  faction with land, so TWASE adds the term for a landless AI anyway (unless blocked, e.g. by `force_diplomacy`), and
+  the engine carries it out (tested 2026-10-12, ERE → Blemmyes: they became your tributary). Dropped: binding them by
+  script after the transfer, `cm:force_make_vassal(player, ai)` makes a **puppet** (tested 2026-10-11), and the
   game's scripts have no call for a tributary.
 - **At war** the region entries (Trade Regions and Region for Troops) only appear once peace is in the deal.
 - **The deal list** labels the term "Region for Troops".
