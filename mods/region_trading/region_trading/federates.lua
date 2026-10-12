@@ -168,14 +168,8 @@ local function spawn(player_key, region_key, units, on_spawned)
 		settlement:logical_position_y(), "region_trading_foedus_" .. region_key, true, on_spawned);
 end;
 
--- The bond of a landless people: the engine offers the tributary term only to a faction with land, so their deal
--- can't have it; once the land is theirs the mod makes them your tributary (force_make_vassal(master, vassal)).
-local function bind(ai_key, player_key)
-	rt.cm():force_make_vassal(player_key, ai_key);
-	rt.log("foedus with %s: made them your tributary (the deal couldn't have the term)", ai_key);
-end;
-
--- tributary: whether the deal has the native tributary term
+-- tributary: whether the deal has the native tributary term (TWASE adds it, also for a landless people; it lacks only
+-- where blocked, e.g. by force_diplomacy, and then there's no bond: force_make_vassal would make a puppet regardless)
 function federates.on_deal(phase, ai_key, player_key, tributary, ...)
 	if phase == "before" then
 		local offer, _, reason = federates.offer(ai_key, player_key, { ... });
@@ -187,10 +181,7 @@ function federates.on_deal(phase, ai_key, player_key, tributary, ...)
 	local offer = pending;
 	pending = nil;
 	federates.active[ai_key] = rt.cm():model():turn_number();
-	if not tributary then
-		local ok, err = pcall(bind, ai_key, player_key);
-		if not ok then rt.log("foedus with %s: making them your tributary failed: %s", ai_key, tostring(err)) end;
-	end;
+	if not tributary then rt.log("foedus with %s: the deal has no tributary term (blocked), no bond", ai_key) end;
 	spawn(player_key, offer.spawn_region, offer.units, function(cqi)
 		rt.log("foedus with %s: their army (general cqi %s) at %s, %d units: %s", ai_key, tostring(cqi), offer.spawn_region,
 			#offer.units, table.concat(offer.units, ", "));
