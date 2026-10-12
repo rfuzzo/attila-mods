@@ -1,6 +1,6 @@
 # Region trading – analysis (Phase 3)
 
-2026-10-04. Sources: `extracted/rtr`, `extracted/fireforged/1`, `extracted/game` (see `tools/extract-all.sh`), the Lua binding names in the game binary (`strings`), and `~/GitHub/twase_macos/docs/addresses.md`.
+2026-10-04. Sources: `extracted/rtr`, `extracted/fireforged/1`, `extracted/game` (see `tools/extract-all.sh`), the Lua binding names in the game binary (`strings`), and `~/GitHub/TWASE/docs/macos/addresses.md`.
 
 ## The `maga` framework (Region Trading Reloaded, author "Hardballer")
 

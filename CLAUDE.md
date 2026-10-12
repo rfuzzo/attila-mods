@@ -20,9 +20,9 @@ Personal Total War: ATTILA mods and tools for macOS (Apple Silicon, Feral port 1
   - Region Trading Reloaded: `2875210346/maga_reloaded.pack`
 - Feral preferences: `~/Library/Application Support/Feral Interactive/Total War ATTILA/Preferences Data` (XML; `DisableAllMods`, `Launcher/mods` list). Only edit while the game is closed.
 
-## TWASE (script extender, ~/GitHub/twase_macos, released v1.0.0)
+## TWASE (script extender, ~/GitHub/TWASE, Windows and macOS in one repo, version 1.1.0)
 
-- TWASE's `main` has region trading (merged 2026-10-12, not pushed yet: `origin/main` is 1.0.1). Build with `xmake -y` in `~/GitHub/twase_macos` (installs into the game; only while the game is closed). For larger TWASE work use a branch.
+- Since 2026-10-12 the macOS code lives in `~/GitHub/TWASE` (rfuzzo/TWASE) under `src/platform/macos/` (`dylib/`, `sdk/`, `launcher/twase-launch.command`), Windows under `src/platform/win32/`. The old repo `~/GitHub/twase_macos` (rfuzzo/twase_macos) is retired, don't commit there. Region trading is on `main` (`src/platform/macos/dylib/Hooks/NativeRegionTrading.cpp`, `dylib/Scripting/LuaApi.cpp`). Build with `xmake -y` in `~/GitHub/TWASE` (installs into the game; only while the game is closed). For larger TWASE work use a branch. The shared code is moving into `src/core/`, so paths there may change.
 
 - Start the game with `<game folder>/twase-launch.command [--skip-launcher] [--mods <Runcher-style mod_list.txt>] [--load "<save>.save"]`. The game ignores process arguments on macOS; the launcher sets Feral's preferences for one launch and links packs from the Workshop into `TotalWarAttilaData/data`. Steam must be running.
 - In-game Lua console: key below Esc. Commands run on the game's Lua thread. Game Lua output goes to the console and `TWASE/logs/` (Lua lines need `logging.level = "debug"` or lower in `TWASE/config.ini`). The global `cm` is nil there: use `get_cm()` (the instance; `campaign_manager` is only the class).
@@ -32,7 +32,7 @@ Personal Total War: ATTILA mods and tools for macOS (Apple Silicon, Feral port 1
 ## Reverse engineering
 
 - Binary Ninja 6.0 (Free) on the Mach-O `Total War ATTILA.app/Contents/MacOS/Total War ATTILA`, bndb at `<game folder>/Total War ATTILA/Total War ATTILA.bndb`. The GUI MCP server (http://127.0.0.1:24642/mcp, when started in BN) can decompile and rename, but renaming functions with many callers is slow.
-- Known addresses (unslid, base `0x100000000`), incl. the diplomacy deal evaluator `0x101d7b25c`: `~/GitHub/twase_macos/docs/addresses.md`.
+- Known addresses (unslid, base `0x100000000`), incl. the diplomacy deal evaluator `0x101d7b25c`: `~/GitHub/TWASE/docs/macos/addresses.md`.
 - The binary has two Lua 5.1 copies; the game's is at `0x103f…`.
 
 ## Mod facts so far
