@@ -2,13 +2,15 @@
 # Copy a mod from mods/<name>/ into the game's data folder as loose files (the TWASE test loop),
 # or remove it again. Loose Lua is read when a campaign loads, so a reload picks up changes.
 # A mod with a `.build-pack` file is built into data/<mod>.pack (`twpack build`) instead of copied loose: the game only
-# takes UI layouts from packs. Add `mod "<mod>.pack";` to tools/mod_list.txt to load it.
+# takes UI layouts from packs. Add `mod "<mod>.pack";` to tools/mod_list.txt to load it. The pack is also linked into
+# Feral's VFS/Local/local_mods/<mod>/, so it shows up in Feral's mod manager (switch it on there).
 # UI layouts written as text (`*.uic.yml`, see docs/UI-FORMAT.md) are encoded to binary layouts on the way (path without the suffix).
 # usage: tools/deploy.sh [--remove] [mod name, default region_trading]
 set -euo pipefail
 
 repo=${0:A:h:h}
 data="$HOME/Library/Application Support/Steam/steamapps/common/Total War Attila/TotalWarAttilaData/data"
+local_mods="$HOME/Library/Application Support/Feral Interactive/Total War ATTILA/VFS/Local/local_mods"
 
 remove=false
 if [[ ${1:-} == --remove ]]; then remove=true; shift; fi
@@ -25,8 +27,13 @@ files=(${(f)"$(cd $src && find . -type f ! -name '.*' | sed 's|^\./||' | sort)"}
 
 if [[ -f $src/.build-pack ]]; then
   [[ -x $twpack ]] || cargo build --release --manifest-path $repo/tools/twpack/Cargo.toml
-  if $remove; then rm -f "$data/$mod.pack"; echo "removed $mod.pack from $data"
-  else $twpack build $src -o "$data/$mod.pack" >/dev/null && echo "built $mod.pack (${#files} files) in $data"; fi
+  if $remove; then
+    rm -f "$data/$mod.pack"; rm -rf "$local_mods/$mod"; echo "removed $mod.pack from $data and Feral's mod manager"
+  else
+    $twpack build $src -o "$data/$mod.pack" >/dev/null && echo "built $mod.pack (${#files} files) in $data"
+    # Feral's mod manager lists local_mods/<folder>/<name>.pack (one folder per mod) next to the Workshop items
+    mkdir -p "$local_mods/$mod" && ln -sfn "$data/$mod.pack" "$local_mods/$mod/$mod.pack"
+  fi
   exit 0
 fi
 

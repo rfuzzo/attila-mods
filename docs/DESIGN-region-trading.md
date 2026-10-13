@@ -105,6 +105,6 @@ RTR's region trading is off and their files stay untouched (8 listeners, tested)
 - the X in the deal list removes the whole region term (one engine action)
 - the faction stats correction from RTR's `clanPanel` (traded regions don't count as "lost")
 - packaging: the DLC campaigns (stubs for `bel_attila` / `cha_attila` exist, untested). Done 2026-10-12: one pack
-  `region_trading.pack` (Lua, layout, loc); Feral's mod manager only lists Workshop subscriptions, so the pack loads
-  through a mod list (`twase-launch.command --mods`, `tools/play.sh`)
+  `region_trading.pack` (Lua, layout, loc), which `tools/deploy.sh` links into Feral's `VFS/Local/local_mods/` so it
+  shows up in Feral's mod manager (2026-10-13), or loaded through a mod list (`twase-launch.command --mods`, `tools/play.sh`)
 - later: the AI's reasons in the panel; AI-initiated offers
