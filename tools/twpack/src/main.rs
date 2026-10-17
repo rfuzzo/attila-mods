@@ -7,9 +7,11 @@
 //   twpack loc export <pack> -o <dir> [pattern...]    export loc files as TSV
 //   twpack build <folder> -o <out.pack>               build a mod pack from a folder
 //   twpack ui check|tree|export|import ...            binary UI layouts (see `twpack ui --help`)
+//   twpack esf dump|check <file.esf> ...              ESF (startpos, saves) as an indented text tree / round-trip check
 //
 // Patterns are case-insensitive path prefixes, or globs if they contain `*`.
 
+mod esf;
 mod render;
 mod uic;
 
@@ -75,6 +77,11 @@ enum Command {
         #[command(subcommand)]
         command: UiCommand,
     },
+    /// ESF files (startpos.esf, saves, map data)
+    Esf {
+        #[command(subcommand)]
+        command: EsfCommand,
+    },
     /// Build a mod pack (PFH4) from a folder; .tsv files become DB tables / loc files
     Build {
         folder: PathBuf,
@@ -104,6 +111,28 @@ enum DbCommand {
         tsv: Vec<PathBuf>,
         #[command(flatten)]
         schema: SchemaArg,
+    },
+}
+
+#[derive(Subcommand)]
+enum EsfCommand {
+    /// Print an ESF file as an indented text tree
+    Dump {
+        /// A loose .esf file, or a pack with --path
+        file: PathBuf,
+        /// Path of the ESF inside the pack given as `file`, e.g. `campaigns/main_attila/startpos.esf`
+        #[arg(long)]
+        path: Option<String>,
+        /// Output file (stdout if omitted)
+        #[arg(short, long)]
+        out: Option<PathBuf>,
+    },
+    /// Decode and re-encode an ESF file and report whether it comes back byte-identical
+    Check {
+        /// A loose .esf file, or a pack with --path
+        file: PathBuf,
+        #[arg(long)]
+        path: Option<String>,
     },
 }
 
@@ -253,6 +282,32 @@ fn main() -> Result<()> {
             extract(&mut pack, paths, &out, &Some(Schema::default()))?;
         }
         Command::Ui { command } => ui(command, game)?,
+        Command::Esf { command: EsfCommand::Dump { file, path, out } } => {
+            let text = esf::dump(&esf::decode(&esf_data(&file, path.as_deref(), game)?)?);
+            match out {
+                Some(out) => write_file(&out, text)?,
+                None => {
+                    let _ = io::stdout().lock().write_all(text.as_bytes());
+                }
+            }
+        }
+        Command::Esf { command: EsfCommand::Check { file, path } } => {
+            let data = esf_data(&file, path.as_deref(), game)?;
+            let decoded = esf::decode(&data)?;
+            let encoded = esf::encode(&mut decoded.clone())?;
+            // rpfm_lib decodes a startpos from its compressed copy (`COMPRESSED_DATA`) and writes it differently, so
+            // the bytes rarely match; what counts is that the re-encoded file reads back as the same tree.
+            match esf::decode(&encoded) {
+                Ok(tree) if tree == decoded => println!("re-encoded file decodes to the same tree"),
+                Ok(_) => println!("re-encoded file decodes to a DIFFERENT tree"),
+                Err(e) => println!("re-encoded file doesn't decode: {:#}", e),
+            }
+            match encoded.iter().zip(&data).position(|(a, b)| a != b) {
+                None if encoded.len() == data.len() => println!("identical ({} bytes)", data.len()),
+                None => println!("same up to {} bytes, then the lengths differ: {} encoded, {} original", encoded.len().min(data.len()), encoded.len(), data.len()),
+                Some(at) => println!("differs at byte {:#x} ({} encoded, {} original)", at, encoded.len(), data.len()),
+            }
+        }
         Command::Build { folder, out, schema } => {
             let schema = schema.load()?;
             build(&folder, &out, &schema, game)?;
@@ -260,6 +315,20 @@ fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+/// An ESF's bytes: a loose file, or `path` inside the pack `file`.
+fn esf_data(file: &Path, path: Option<&str>, game: &GameInfo) -> Result<Vec<u8>> {
+    match path {
+        Some(path) => {
+            let mut pack = open(file, game)?;
+            let key = matching(&pack, |p| p.eq_ignore_ascii_case(path)).into_iter().next().ok_or_else(|| anyhow!("{} not in {}", path, file.display()))?;
+            let rfile = pack.files_mut().get_mut(&key).unwrap();
+            rfile.load()?;
+            Ok(rfile.cached()?.to_vec())
+        }
+        None => fs::read(file).with_context(|| format!("reading {}", file.display())),
+    }
 }
 
 fn dirs_home() -> PathBuf {
