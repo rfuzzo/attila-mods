@@ -1,6 +1,6 @@
 # Missing building slots (Argentoratum and three others)
 
-Status 2026-10-17: cause found (vanilla bug, inherited by Fireforged); patched startpos in `fireforged_fixes`, not tested in game yet. Investigated with `twpack esf dump` (new, see below).
+Status 2026-10-17: cause found (vanilla bug, inherited by Fireforged); patched startpos in `fireforged_fixes`, works in game (new Fireforged campaign 2026-10-17: Argentoratum 4 slots, Ancyra, Caesarea Eusebia and Bostra 6). Investigated with `twpack esf dump` (new, see below).
 
 ## Symptom
 
@@ -44,6 +44,11 @@ why it was gone is unknown.)
 `campaigns/main_attila/startpos.esf`. It isn't in git (it's Fireforged's and CA's data), and since it's made from the
 installed pack it follows Fireforged's updates.
 
+Tested 2026-10-17 without hands: a throwaway pack (listed first) with `lua_scripts/frontend_scripted.lua` plus a navigator
+that clicks `button_campaign`, `button_new_campaign`, `att_fact_western_roman_empire`, `button_start_campaign` (the
+frontend's button ids; the campaign list is the faction screen `sp_grand_campaign` itself), and a campaign stub that logs
+`region:slot_list():num_items()` and runs `fireforged_fixes.report()`. The game accepted the out-of-order ids.
+
 Each new slot is a copy of the region's last secondary slot (same template: `rom_minor_secondary`, `att_major_silk`,
 `rom_major_secondary`) with the next index in its key (`…argentoratum:3`, `…ancyra:5`), the building manager of an empty
 slot (no `BUILDING_BASE`), and the next free ids: slots 865–868, garrisons 1051–1054. The ids were 1–864 and 1–1050
@@ -52,11 +57,15 @@ test shows. Nothing else in the file refers to slots by key (each key occurs onc
 differs from Fireforged's only in the four added slots.
 
 Limits:
-- **New campaigns only.** A save has its own copy of the regions; the running campaign keeps its 3 / 5 slots.
-  (`add-slots` also takes a save, which has the same outer / compressed layout, but that's untested.)
+- **New campaigns only.** The startpos is only read when a campaign starts; from then on the save holds the regions
+  (its own `REGION_SLOT` records), so a running campaign keeps its 3 / 5 slots. Lua has no way to add a slot, and the
+  engine only creates them while loading a startpos. `add-slots` also takes a save (same outer / compressed layout),
+  but a save has more state that could refer to slots (each slot key occurs twice there), so patching saves is left out
+  on purpose: a new campaign is required.
 - **Load order:** the pack has to have priority over `@Fireforged-Empire_1.pack`, or Fireforged's startpos wins.
-  In Total War the pack listed first wins, so `tools/mod_list.txt` lists `fireforged_fixes.pack` before Fireforged's;
-  in Feral's mod manager put it above them. Not verified on Feral's port yet.
+  The pack listed first wins (confirmed on Feral's port with `--mods`: a dev pack listed first replaced
+  `data.pack`'s `lua_scripts/frontend_scripted.lua`, and the new campaign got the patched startpos), so
+  `tools/mod_list.txt` lists `fireforged_fixes.pack` before Fireforged's; in Feral's mod manager put it above them.
 - **Check in game:** `fireforged_fixes.report()` in the console logs the four settlements' slot counts (`4 of 4`,
   `6 of 6`) and says when some are short.
 
