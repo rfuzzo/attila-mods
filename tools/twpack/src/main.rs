@@ -7,7 +7,7 @@
 //   twpack loc export <pack> -o <dir> [pattern...]    export loc files as TSV
 //   twpack build <folder> -o <out.pack>               build a mod pack from a folder
 //   twpack ui check|tree|export|import ...            binary UI layouts (see `twpack ui --help`)
-//   twpack esf dump|check <file.esf> ...              ESF (startpos, saves) as an indented text tree / round-trip check
+//   twpack esf dump|check|add-slots <file.esf> ...    ESF (startpos, saves): text tree, writer check, add building slots
 //
 // Patterns are case-insensitive path prefixes, or globs if they contain `*`.
 
@@ -127,12 +127,26 @@ enum EsfCommand {
         #[arg(short, long)]
         out: Option<PathBuf>,
     },
-    /// Decode and re-encode an ESF file and report whether it comes back byte-identical
+    /// Re-encode an ESF file with twpack's writer and report whether it comes back byte-identical (for a startpos
+    /// also its compressed inner ESF, and whether the recompressed file reads back the same)
     Check {
         /// A loose .esf file, or a pack with --path
         file: PathBuf,
         #[arg(long)]
         path: Option<String>,
+    },
+    /// Add an empty secondary building slot to regions (a copy of the region's last secondary slot) and write the
+    /// ESF to a new file; see docs/BUG-missing-building-slots.md
+    AddSlots {
+        /// A loose .esf file (startpos or save), or a pack with --path
+        file: PathBuf,
+        #[arg(long)]
+        path: Option<String>,
+        #[arg(short, long)]
+        out: PathBuf,
+        /// Region keys, e.g. `att_reg_maxima_sequanorum_argentoratum`; one slot each (repeat a key for more)
+        #[arg(required = true)]
+        regions: Vec<String>,
     },
 }
 
@@ -293,20 +307,18 @@ fn main() -> Result<()> {
         }
         Command::Esf { command: EsfCommand::Check { file, path } } => {
             let data = esf_data(&file, path.as_deref(), game)?;
-            let decoded = esf::decode(&data)?;
-            let encoded = esf::encode(&mut decoded.clone())?;
-            // rpfm_lib decodes a startpos from its compressed copy (`COMPRESSED_DATA`) and writes it differently, so
-            // the bytes rarely match; what counts is that the re-encoded file reads back as the same tree.
-            match esf::decode(&encoded) {
-                Ok(tree) if tree == decoded => println!("re-encoded file decodes to the same tree"),
-                Ok(_) => println!("re-encoded file decodes to a DIFFERENT tree"),
-                Err(e) => println!("re-encoded file doesn't decode: {:#}", e),
+            let stored = esf::Stored::read(&data)?;
+            for line in stored.check(&data)? {
+                println!("{}", line);
             }
-            match encoded.iter().zip(&data).position(|(a, b)| a != b) {
-                None if encoded.len() == data.len() => println!("identical ({} bytes)", data.len()),
-                None => println!("same up to {} bytes, then the lengths differ: {} encoded, {} original", encoded.len().min(data.len()), encoded.len(), data.len()),
-                Some(at) => println!("differs at byte {:#x} ({} encoded, {} original)", at, encoded.len(), data.len()),
+        }
+        Command::Esf { command: EsfCommand::AddSlots { file, path, out, regions } } => {
+            let data = esf_data(&file, path.as_deref(), game)?;
+            let mut stored = esf::Stored::read(&data)?;
+            for line in esf::add_slots(stored.campaign_mut(), &regions)? {
+                println!("{}", line);
             }
+            write_file(&out, stored.write()?)?;
         }
         Command::Build { folder, out, schema } => {
             let schema = schema.load()?;

@@ -1,6 +1,6 @@
 # Missing building slots (Argentoratum and three others)
 
-Status 2026-10-17: cause found (vanilla bug, inherited by Fireforged), not fixed. Investigated with `twpack esf dump` (new, see below).
+Status 2026-10-17: cause found (vanilla bug, inherited by Fireforged); patched startpos in `fireforged_fixes`, not tested in game yet. Investigated with `twpack esf dump` (new, see below).
 
 ## Symptom
 
@@ -37,31 +37,55 @@ the same four short regions. So it's a base game bug that Fireforged inherited w
 Fireforged bug. (That file was missing on this machine until a Steam "verify integrity" on 2026-10-17 restored it;
 why it was gone is unknown.)
 
-## Fix options
+## Fix (in `fireforged_fixes`)
 
-1. **Ask Fireforged to add the slots** when they next rebuild their startpos. CA won't patch Attila any more, but
-   Fireforged regenerates its own startpos with the Assembly Kit, so they could fix the slot data there. That's the clean fix,
-   but it only helps new campaigns.
-2. **Patch the startpos ourselves**: copy a secondary `REGION_SLOT` record of the same region, set the next index in its
-   key (`…argentoratum:3`), clear its building, give it unused slot / garrison / building ids, and ship the startpos in a
-   small pack loaded after Fireforged. New campaigns only, and the copy has to be redone whenever Fireforged updates its
-   startpos (it would otherwise silently undo their changes). Open questions: how the game allocates these ids (a counter
-   somewhere in the file that new ids must stay below or above), and whether slots are also referenced elsewhere (in the
-   save, each slot key appears twice, in the startpos only once).
-3. **Patch the save** the same way, for the running campaign. Same tooling and open questions; saves are CAAB ESF too.
-4. **At runtime (Lua / TWASE)**: Attila's Lua has no way to add slots, and a native hook that adds one to a region would
-   be much more reverse engineering than options 2 and 3.
+`mods/fireforged_fixes/.generate` (run by `tools/deploy.sh` on every build) takes the startpos out of the installed
+`@Fireforged-Empire_1.pack`, adds the slots with `twpack esf add-slots`, and puts it into `fireforged_fixes.pack` as
+`campaigns/main_attila/startpos.esf`. It isn't in git (it's Fireforged's and CA's data), and since it's made from the
+installed pack it follows Fireforged's updates.
 
-Options 2 and 3 are blocked on writing ESF: rpfm_lib (v5.1.1) decodes these files, but what it encodes doesn't decode
-again (`String not found: 262144`), for Fireforged's startpos and for vanilla's `pro_attila` one alike, so it's an
-rpfm_lib bug in the CAAB writer, not something in the file. Its encoder also writes the whole tree uncompressed next to
-a new compressed copy (`COMPRESSED_DATA`, which is what the decoder reads), 15.6 MB instead of 6.7 MB; whether the game
-accepts that layout is untested. So a patch needs a working CAAB writer first (fix rpfm's, or write one in twpack),
-checked with `twpack esf check` until it reports the same tree, and then a test in game.
+Each new slot is a copy of the region's last secondary slot (same template: `rom_minor_secondary`, `att_major_silk`,
+`rom_major_secondary`) with the next index in its key (`…argentoratum:3`, `…ancyra:5`), the building manager of an empty
+slot (no `BUILDING_BASE`), and the next free ids: slots 865–868, garrisons 1051–1054. The ids were 1–864 and 1–1050
+without gaps, numbered in region order, so the new ones are out of order; whether the game minds is what the in-game
+test shows. Nothing else in the file refers to slots by key (each key occurs once), and the dump of the patched file
+differs from Fireforged's only in the four added slots.
+
+Limits:
+- **New campaigns only.** A save has its own copy of the regions; the running campaign keeps its 3 / 5 slots.
+  (`add-slots` also takes a save, which has the same outer / compressed layout, but that's untested.)
+- **Load order:** the pack has to have priority over `@Fireforged-Empire_1.pack`, or Fireforged's startpos wins.
+  In Total War the pack listed first wins, so `tools/mod_list.txt` lists `fireforged_fixes.pack` before Fireforged's;
+  in Feral's mod manager put it above them. Not verified on Feral's port yet.
+- **Check in game:** `fireforged_fixes.report()` in the console logs the four settlements' slot counts (`4 of 4`,
+  `6 of 6`) and says when some are short.
+
+Other options considered: asking Fireforged to fix it when they next rebuild their startpos with the Assembly Kit
+(cleaner, but out of our hands), and a runtime fix (Attila's Lua can't add slots; a TWASE hook would be much more
+reverse engineering).
+
+## Writing ESF
+
+rpfm_lib (v5.1.1) decodes these files, but its CAAB writer writes a `utf16[]` array's length as a u32 where the format
+(and its own reader) has a CAULEB128, so what it writes doesn't decode again (`String not found: 262144`), for any
+startpos. Its LZMA compressor (lzma-rs) also only writes literals, which made a startpos 15.6 MB instead of 6.7 MB.
+twpack has its own writer (`tools/twpack/src/esf.rs`): rpfm's node encoder with that fixed, the original string tables'
+order kept, and liblzma (`xz2`) with CA's LZMA settings (properties `5d 00 00 40 00`: lc 3, lp 0, pb 2, 4 MB dictionary).
+
+A startpos is two ESFs: the outer one (`SAVE_GAME_HEADER`, `CAMPAIGN_PREOPEN_MAP_INFO`, `COMPRESSED_DATA`) and, in
+`COMPRESSED_DATA`, the LZMA-compressed full campaign (`BUILD`, the same header and map info, `CAMPAIGN_ENV`, where the
+regions are). rpfm_lib's decoder returns the inner one in place of the file; twpack reads both and writes both.
+
+What twpack writes isn't byte-identical to CA's files: CA pads some CAULEB128 sizes (`BUILD`'s size takes 5 bytes
+where 3 do) and rpfm_lib's tree doesn't keep that, so the record sizes come out a few hundred bytes shorter. Readers
+decode both the same; `esf check` checks that the rewritten file reads back as the same campaign (Fireforged's and
+vanilla's startpos and the 390 AD save do), and twpack's own output comes back byte-identical.
 
 ## Tools
 
 - `twpack esf dump <file.esf> [-o out.txt]`, or `twpack esf dump <pack> --path campaigns/main_attila/startpos.esf`:
   the ESF as an indented text tree (`NAME[i]` for each block of a list). Fireforged's startpos is 170 MB of text,
   the 390 AD save 490 MB; grep it.
-- `twpack esf check <file|pack --path …>`: decodes, re-encodes and decodes again, and says whether the tree survives.
+- `twpack esf check <file|pack --path …>`: re-encodes with twpack's writer, compares the bytes (the file, and a
+  startpos's compressed ESF), recompresses and reads it back.
+- `twpack esf add-slots <file|pack --path …> -o <out.esf> <region>...`: adds one empty secondary slot per region key.

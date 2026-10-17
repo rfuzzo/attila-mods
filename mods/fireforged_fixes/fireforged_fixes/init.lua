@@ -23,7 +23,8 @@ require("fireforged_fixes/events").apply(env);
 -- last, so it wraps the functions the modules above replaced or wrapped
 if ff.config.safe_calls then require("fireforged_fixes/safety").apply(env) end;
 
--- What got patched, how often a wrapped function failed, the spawn pools left.
+-- What got patched, how often a wrapped function failed, the spawn pools left, the slots of the settlements
+-- the startpos fix adds one to.
 function ff.report()
 	local names = {};
 	for name in pairs(ff.patched) do names[#names + 1] = name end;
@@ -43,6 +44,8 @@ function ff.report()
 			ff.log("  spawn pool %s (%s) has %d left", pool, func, #points);
 		end;
 	end;
+
+	require("fireforged_fixes/slots").report();
 end;
 
 local patched = 0;

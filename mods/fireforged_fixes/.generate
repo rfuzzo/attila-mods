@@ -1,0 +1,23 @@
+#!/bin/zsh
+# Files for the pack that aren't in git, because they're derived from Fireforged's and CA's data; tools/deploy.sh
+# runs this with the build folder and twpack.
+#
+# campaigns/main_attila/startpos.esf: Fireforged's startpos with the building slots vanilla's is missing
+# (docs/BUG-missing-building-slots.md). It's made from the installed Fireforged pack on every build, so it follows
+# Fireforged's updates. New campaigns only, and only while this pack has priority over @Fireforged-Empire_1.pack.
+# usage: .generate <build folder> <twpack>
+set -euo pipefail
+
+out=$1
+twpack=$2
+ff="$HOME/Library/Application Support/Steam/steamapps/workshop/content/325610/2649271551/@Fireforged-Empire_1.pack"
+if [[ ! -f $ff ]]; then
+  echo "Fireforged not installed: building without the startpos fix" >&2
+  exit 0
+fi
+mkdir -p "$out/campaigns/main_attila"
+$twpack esf add-slots "$ff" --path campaigns/main_attila/startpos.esf -o "$out/campaigns/main_attila/startpos.esf" \
+  att_reg_maxima_sequanorum_argentoratum \
+  att_reg_bithynia_ancyra \
+  att_reg_cappadocia_caesarea_eusebia \
+  att_reg_palaestinea_nova_trajana_bostra >/dev/null
