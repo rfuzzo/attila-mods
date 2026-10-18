@@ -7,7 +7,7 @@
 //   twpack loc export <pack> -o <dir> [pattern...]    export loc files as TSV
 //   twpack build <folder> -o <out.pack>               build a mod pack from a folder
 //   twpack ui check|tree|export|import ...            binary UI layouts (see `twpack ui --help`)
-//   twpack esf dump|check|add-slots <file.esf> ...    ESF (startpos, saves): text tree, writer check, add building slots
+//   twpack esf dump|check <file.esf> ...              ESF (startpos, saves): text tree, writer check
 //
 // Patterns are case-insensitive path prefixes, or globs if they contain `*`.
 
@@ -134,19 +134,6 @@ enum EsfCommand {
         file: PathBuf,
         #[arg(long)]
         path: Option<String>,
-    },
-    /// Add an empty secondary building slot to regions (a copy of the region's last secondary slot) and write the
-    /// ESF to a new file; see docs/BUG-missing-building-slots.md
-    AddSlots {
-        /// A loose .esf file (startpos or save), or a pack with --path
-        file: PathBuf,
-        #[arg(long)]
-        path: Option<String>,
-        #[arg(short, long)]
-        out: PathBuf,
-        /// Region keys, e.g. `att_reg_maxima_sequanorum_argentoratum`; one slot each (repeat a key for more)
-        #[arg(required = true)]
-        regions: Vec<String>,
     },
 }
 
@@ -311,14 +298,6 @@ fn main() -> Result<()> {
             for line in stored.check(&data)? {
                 println!("{}", line);
             }
-        }
-        Command::Esf { command: EsfCommand::AddSlots { file, path, out, regions } } => {
-            let data = esf_data(&file, path.as_deref(), game)?;
-            let mut stored = esf::Stored::read(&data)?;
-            for line in esf::add_slots(stored.campaign_mut(), &regions)? {
-                println!("{}", line);
-            }
-            write_file(&out, stored.write()?)?;
         }
         Command::Build { folder, out, schema } => {
             let schema = schema.load()?;

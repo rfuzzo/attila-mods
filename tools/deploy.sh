@@ -5,8 +5,6 @@
 # takes UI layouts from packs. Add `mod "<mod>.pack";` to tools/mod_list.txt to load it. The pack is also linked into
 # Feral's VFS/Local/local_mods/<mod>/, so it shows up in Feral's mod manager (switch it on there).
 # UI layouts written as text (`*.uic.yml`, see docs/UI-FORMAT.md) are encoded to binary layouts on the way (path without the suffix).
-# A pack mod with a `.generate` script gets the files it writes too (`.generate <build folder> <twpack>`), for files
-# that can't be in git because they're made from the game's or other mods' data.
 # usage: tools/deploy.sh [--remove] [mod name, default region_trading]
 set -euo pipefail
 
@@ -32,15 +30,7 @@ if [[ -f $src/.build-pack ]]; then
   if $remove; then
     rm -f "$data/$mod.pack"; rm -rf "$local_mods/$mod"; echo "removed $mod.pack from $data and Feral's mod manager"
   else
-    build=$src
-    if [[ -x $src/.generate ]]; then
-      build=$(mktemp -d)
-      trap 'rm -rf $build' EXIT
-      cp -R $src/ $build/
-      $src/.generate $build $twpack
-      files=(${(f)"$(cd $build && find . -type f ! -name '.*' | sed 's|^\./||' | sort)"})
-    fi
-    $twpack build $build -o "$data/$mod.pack" >/dev/null && echo "built $mod.pack (${#files} files) in $data"
+    $twpack build $src -o "$data/$mod.pack" >/dev/null && echo "built $mod.pack (${#files} files) in $data"
     # Feral's mod manager lists local_mods/<folder>/<name>.pack (one folder per mod) next to the Workshop items
     mkdir -p "$local_mods/$mod" && ln -sfn "$data/$mod.pack" "$local_mods/$mod/$mod.pack"
   fi

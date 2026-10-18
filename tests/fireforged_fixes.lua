@@ -256,28 +256,7 @@ do
 	check(calls == 5, "dedupe_turn1 is off by default");
 end;
 
--- 9. slot report: counts the settlements the startpos fix should have given an extra slot
-do
-	local _, cm = boot();
-	local counts = {
-		att_reg_maxima_sequanorum_argentoratum = 3,
-		att_reg_bithynia_ancyra = 6,
-		att_reg_cappadocia_caesarea_eusebia = 6,
-		att_reg_palaestinea_nova_trajana_bostra = 6,
-	};
-	local manager = { region_by_key = function(_, key)
-		return { slot_list = function() return { num_items = function() return counts[key] end } end };
-	end };
-	cm.model = function() return { world = function() return { region_manager = function() return manager end } end } end;
-	local slots = require("fireforged_fixes/slots");
-	check(slots.report() == 1, "slot report: Argentoratum with 3 slots is short");
-	counts.att_reg_maxima_sequanorum_argentoratum = 4;
-	check(slots.report() == 0, "slot report: none short with the fix");
-	local ok, err = pcall(fireforged_fixes.report);
-	check(ok, "report runs (" .. tostring(err) .. ")");
-end;
-
--- 10. nothing to do without Fireforged
+-- 9. nothing to do without Fireforged
 do
 	_G.script_env = nil;
 	for name in pairs(package.loaded) do

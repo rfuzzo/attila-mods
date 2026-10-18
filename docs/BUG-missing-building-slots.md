@@ -1,6 +1,8 @@
 # Missing building slots (Argentoratum and three others)
 
-Status 2026-10-17: cause found (vanilla bug, inherited by Fireforged); patched startpos in `fireforged_fixes`, works in game (new Fireforged campaign 2026-10-17: Argentoratum 4 slots, Ancyra, Caesarea Eusebia and Bostra 6). Investigated with `twpack esf dump` (new, see below).
+Status 2026-10-18: won't fix. The towns have no room for another building plot, and the slot count follows the plots
+(vanilla, inherited by Fireforged). A patched startpos that added the slots was tried and removed: the game had the slots,
+but the settlement panel didn't show them. Investigated with `twpack esf dump` (see below).
 
 ## Symptom
 
@@ -26,7 +28,7 @@ capitals), and four have one secondary slot too few:
 
 The slot, garrison and building ids of these regions are consecutive (Argentoratum: slots 284–286, garrisons 344–347,
 so the settlement's garrison follows right after the third slot's), so no slot was deleted afterwards: the startpos was
-generated with these slot counts. That happens in CA's Assembly Kit (BOB), from its own slot data, which isn't in the game.
+generated with these slot counts, which come from the town layout (next section).
 
 The save `Picts 390 AD Spring.save` has the same counts (Argentoratum `:0`–`:2`, Ancyra `:0`–`:4`), so a running campaign
 keeps what its startpos had.
@@ -37,41 +39,46 @@ the same four short regions. So it's a base game bug that Fireforged inherited w
 Fireforged bug. (That file was missing on this machine until a Steam "verify integrity" on 2026-10-17 restored it;
 why it was gone is unknown.)
 
-## Fix (in `fireforged_fixes`)
+## Why: no room in the town layout
 
-`mods/fireforged_fixes/.generate` (run by `tools/deploy.sh` on every build) takes the startpos out of the installed
-`@Fireforged-Empire_1.pack`, adds the slots with `twpack esf add-slots`, and puts it into `fireforged_fixes.pack` as
-`campaigns/main_attila/startpos.esf`. It isn't in git (it's Fireforged's and CA's data), and since it's made from the
-installed pack it follows Fireforged's updates.
+Each settlement's record in the startpos also has its town layout, `SETTLEMENT / SETTLEMENT_EXPANSION_MANAGER /
+SETTLEMENT_EXPANSION_MAP_DATA`: numbered plots (`SLOT_MAP_DATA`: plot number, centre hex, a 7-hex `SLOT_FOOTPRINT_ARRAY` of
+the centre and its 6 neighbours, a `SLOT_ZOE_ARRAY` zone around it, `SLOT_WALL_ARRAY`, a u32), first the settlement
+(plot 0), then the port (plot 1; inland towns have an entry without ground, centre 65535, 65535, no hexes), then
+`SECONDARY_SLOT_ARRAY` with plots 2, 3, ..., and `SPRAWL_BLOCK`, the town's hexes, each tagged with the bit of the plot
+whose zone it's in (`1` the settlement, `4` plot 2, `8` plot 3, `16` plot 4, `0` free). Footprints sit in their zone,
+zones in the sprawl, zones don't overlap. Hex neighbours: even x (x±1, y−1), (x±1, y), (x, y±1); odd x (x±1, y),
+(x±1, y+1), (x, y±1).
 
-Tested 2026-10-17 without hands: a throwaway pack (listed first) with `lua_scripts/frontend_scripted.lua` plus a navigator
-that clicks `button_campaign`, `button_new_campaign`, `att_fact_western_roman_empire`, `button_start_campaign` (the
-frontend's button ids; the campaign list is the faction screen `sp_grand_campaign` itself), and a campaign stub that logs
-`region:slot_list():num_items()` and runs `fireforged_fixes.report()`. The game accepted the out-of-order ids.
+Every settlement has as many slots as plots, and when the world is created the game maps slots to plots in order (a save
+has it in `SETTLEMENT_EXPANSION_MANAGER / SLOTS_ARRAY`: Octodurus `:0` → plot 0, `:1` → 2, `:2` → 3, `:3` → 4). The four
+short towns have one secondary plot fewer (Argentoratum plots 2 and 3, Octodurus 2 to 4), and in three of them the sprawl
+has no free centre whose 6 neighbours are free too, i.e. no room for another footprint (Ancyra has two such spots). So the
+tools that built the startpos placed as many plots as the ground allowed, and the slots followed: an unintended side
+effect of the town generation, but consistent within the engine, and CA never changed it.
 
-Each new slot is a copy of the region's last secondary slot (same template: `rom_minor_secondary`, `att_major_silk`,
-`rom_major_secondary`) with the next index in its key (`…argentoratum:3`, `…ancyra:5`), the building manager of an empty
-slot (no `BUILDING_BASE`), and the next free ids: slots 865–868, garrisons 1051–1054. The ids were 1–864 and 1–1050
-without gaps, numbered in region order, so the new ones are out of order; whether the game minds is what the in-game
-test shows. Nothing else in the file refers to slots by key (each key occurs once), and the dump of the patched file
-differs from Fireforged's only in the four added slots.
+## What was tried (removed again)
 
-Limits:
-- **New campaigns only.** The startpos is only read when a campaign starts; from then on the save holds the regions
-  (its own `REGION_SLOT` records), so a running campaign keeps its 3 / 5 slots. Lua has no way to add a slot, and the
-  engine only creates them while loading a startpos. `add-slots` also takes a save (same outer / compressed layout),
-  but a save has more state that could refer to slots (each slot key occurs twice there), so patching saves is left out
-  on purpose: a new campaign is required.
-- **Load order:** the pack has to have priority over `@Fireforged-Empire_1.pack`, or Fireforged's startpos wins.
-  The pack listed first wins (confirmed on Feral's port with `--mods`: a dev pack listed first replaced
-  `data.pack`'s `lua_scripts/frontend_scripted.lua`, and the new campaign got the patched startpos), so
-  `tools/mod_list.txt` lists `fireforged_fixes.pack` before Fireforged's; in Feral's mod manager put it above them.
-- **Check in game:** `fireforged_fixes.report()` in the console logs the four settlements' slot counts (`4 of 4`,
-  `6 of 6`) and says when some are short.
+A startpos patch in `fireforged_fixes`, generated at build time from the installed Fireforged pack (so not in git): per
+region a copy of its last secondary `REGION_SLOT` with the next key index (`…argentoratum:3`), an empty building manager
+and the next free slot / garrison ids (865–868, 1051–1054; the ids were 1–864 and 1–1050 in region order), later also a
+secondary plot without ground (like an inland port entry) for it. In a new campaign Lua counted 4 / 6 slots, but the
+settlement panel showed the old number, with and without the extra plot. A slot the player can't see but the AI might
+build in is worse than none, so it went; a real fix would need room in the town (new sprawl hexes on the terrain and a
+proper footprint, and whatever else the panel needs), which is guesswork. Patching saves was ruled out before (more state
+refers to slots there).
 
-Other options considered: asking Fireforged to fix it when they next rebuild their startpos with the Assembly Kit
-(cleaner, but out of our hands), and a runtime fix (Attila's Lua can't add slots; a TWASE hook would be much more
-reverse engineering).
+Learned on the way:
+- The startpos is only read when a campaign starts; the save then has its own copy of the regions. Attila's Lua can't add
+  slots, and the engine only creates them when it loads a startpos.
+- Pack priority on Feral's port: the pack listed first wins (a test pack listed first replaced `data.pack`'s
+  `lua_scripts/frontend_scripted.lua`, and `fireforged_fixes.pack` listed first replaced Fireforged's startpos).
+- An unattended new campaign: a throwaway pack listed first with `lua_scripts/frontend_scripted.lua` plus a navigator
+  that clicks `button_campaign`, `button_new_campaign`, `att_fact_western_roman_empire`, `button_start_campaign` (the
+  frontend's ids; the faction screen `sp_grand_campaign` is the campaign list too), and a campaign stub in
+  `campaigns/main_attila/mods/<name>/scripting.lua`. Clicking into the window while a script moves the camera
+  (`scroll_camera_with_direction`) crashed the game: a UI listener calls `context:IsComponentType` (`0x10214f304`) on a
+  click that hit no component, with a null pointer.
 
 ## Writing ESF
 
@@ -87,8 +94,9 @@ regions are). rpfm_lib's decoder returns the inner one in place of the file; twp
 
 What twpack writes isn't byte-identical to CA's files: CA pads some CAULEB128 sizes (`BUILD`'s size takes 5 bytes
 where 3 do) and rpfm_lib's tree doesn't keep that, so the record sizes come out a few hundred bytes shorter. Readers
-decode both the same; `esf check` checks that the rewritten file reads back as the same campaign (Fireforged's and
-vanilla's startpos and the 390 AD save do), and twpack's own output comes back byte-identical.
+decode both the same, and the game loaded a startpos twpack wrote; `esf check` checks that the rewritten file reads back as
+the same campaign (Fireforged's and vanilla's startpos and the 390 AD save do), and twpack's own output comes back
+byte-identical.
 
 ## Tools
 
@@ -97,4 +105,3 @@ vanilla's startpos and the 390 AD save do), and twpack's own output comes back b
   the 390 AD save 490 MB; grep it.
 - `twpack esf check <file|pack --path …>`: re-encodes with twpack's writer, compares the bytes (the file, and a
   startpos's compressed ESF), recompresses and reads it back.
-- `twpack esf add-slots <file|pack --path …> -o <out.esf> <region>...`: adds one empty secondary slot per region key.
