@@ -20,9 +20,10 @@ function Get-SteamLibraries {
 
 function Get-GameDir {
     if ($env:ATTILA_GAME) { return $env:ATTILA_GAME }
+    # the library whose app manifest Steam keeps (a copy left in another library doesn't count)
     foreach ($lib in Get-SteamLibraries) {
         $dir = Join-Path $lib 'steamapps\common\Total War Attila'
-        if (Test-Path (Join-Path $dir 'Attila.exe')) { return $dir }
+        if ((Test-Path (Join-Path $lib "steamapps\appmanifest_$AppId.acf")) -and (Test-Path (Join-Path $dir 'Attila.exe'))) { return $dir }
     }
     throw 'Total War: ATTILA not found in any Steam library (set $env:ATTILA_GAME to the game folder)'
 }
