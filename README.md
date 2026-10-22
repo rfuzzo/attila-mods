@@ -1,7 +1,11 @@
 # attila-mods
 
-Personal mods and tools for Total War: ATTILA on macOS.
+Personal mods and tools for Total War: ATTILA on macOS and Windows.
 
-- `tools/twpack` – pack tool for macOS (list, extract, DB ↔ TSV, build), on [rpfm_lib](https://github.com/Frodo45127/rpfm)
-- `mods/` – mods (see `docs/` for plans)
+- `packs/` – the built mods, ready to download: copy a `.pack` into the game's `data` folder and switch it on in the launcher's mod manager. Both need [TWASE](https://github.com/rfuzzo/TWASE) for their scripts.
+  - `region_trading.pack` – trade regions in diplomacy (unifies Fireforged Empire's and Region Trading Reloaded's). Needs a TWASE with native region deals (`twase.enable_region_trading`), otherwise it stays off.
+  - `fireforged_fixes.pack` – fixes for Fireforged Empire's scripts; load it after Fireforged. Inert without it.
+- `tools/twpack` – pack tool (list, extract, DB ↔ TSV, build), on [rpfm_lib](https://github.com/Frodo45127/rpfm)
+- `tools/` – deploy and launch scripts: `deploy.sh` / `play.sh` on macOS, `deploy.ps1` / `play.ps1` (`play.cmd` to double-click) on Windows, `build-packs.sh` rebuilds `packs/` (both)
+- `mods/` – mod sources (see `docs/` for plans)
 - `extracted/` – unpacked game and mod files for reference, git-ignored
