@@ -1,8 +1,9 @@
 # TWASE encyclopedia and settlement-slot checks
 
 Opt-in debug mod: `campaign_ui_dev`. Requires TWASE's URL/slot feature build on Windows or macOS, not only the
-integrity fix on `main`. It works with the main, Charlemagne, and Last Roman campaign entrypoints. It has no
-region-trading or Fireforged dependency and does not modify startpos, saves, buildings, or UI layouts.
+integrity fix on `main`. It works with the main, Charlemagne, and Last Roman campaign entrypoints, and with The
+Dawnless Days' `main_attila_map`. It has no region-trading or Fireforged dependency and does not modify startpos,
+saves, buildings, or UI layouts.
 
 The native hooks still need Windows gameplay verification. Passing the API checks below is **not** proof that the
 browser consumes the changed URL or that the game renders the requested slots. The local probe page and the UI
@@ -136,6 +137,23 @@ This needs **both** a UI layout with `building_slot_7`/`building_slot_8` (and fi
 data with the intended slots. The hooks do not create either. A vanilla six/four template cannot demonstrate an
 eight/six expansion; missing widgets are not a hook failure. Inspect reports existing widget capacity to expose this
 prerequisite. Do not assume this fixes every missing-plot issue described in [BUG-missing-building-slots.md](BUG-missing-building-slots.md).
+
+The Dawnless Days (TDD) ships all three for 12/9: a `settlement_panel` with `building_slot_1`–`12`, a startpos with
+12 slots per province capital and 9 elsewhere, and a Windows patcher (`TDD_12_9_slots_A.exe`, started from
+`lua_scripts/extend_slots.lua` on `UICreated`) that rewrites the same bound at `+0x48` in the game's memory: 6 → 12
+in SetAsCapital, 4 → 9 in the callback's constructor. `tdd_twase_slots` replaces it with TWASE's API: build it with
+`deploy.ps1 tdd_twase_slots` (`data\tdd_twase_slots.pack`), switch it on in Runcher or the launcher next to TDD, and
+start a fresh game process (TDD's patch lasts until exit). TDD sends Lua `print` to its own `tdd.log.txt`, which
+then shows `[tdd_twase_slots] Slot limits 12/9 set through TWASE`, the encyclopedia URL, and no new `Extending slot
+limits to 12/9`. If the TWASE hook is unavailable, it logs that and runs TDD's patcher. With `campaign_ui_dev` also
+deployed, `inspect()` should report 12 widgets on capital cards and 9 elsewhere; `reset_slots()` shows the native
+6/4 for comparison.
+
+TDD's encyclopedia: without `tdd.cfg` (or with `encyclopedia = online`) the prefix is `https://www.rai4u.de/tde`.
+The game appends `/unit/%S`, `/building/%S`, `/tech/%S`, … as a path, and that site routes such paths itself
+(`…/tde/unit/arn_spear_militia` and `…/tde/building/rom_ere_city_major_1rom_cult_dwarves`, the form of the site's own
+building links, open the cards). TDD's `offline` default points at
+`C:/Program Files (x86)/Steam/...`, so it only works for a game installed there.
 
 ## 4. Clean up and report
 
