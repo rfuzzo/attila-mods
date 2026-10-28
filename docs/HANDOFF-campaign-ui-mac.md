@@ -1,8 +1,9 @@
 # Handoff: campaign UI controls on macOS
 
-Windows (Steam) passed on 2026-10-28; see "Windows integration run" in TWASE's `docs/windows-port.md`. The macOS
-backend (`src/platform/macos/dylib/Hooks/CampaignUI.cpp`, TWASE `f14d33b`) has not been run in the game. Follow
-[TEST-campaign-ui.md](TEST-campaign-ui.md); this note lists what differs on the Mac and what is still open.
+Windows (Steam) and macOS (Steam arm64) acceptance completed on 2026-10-28, except the explicitly deferred
+Charlemagne and The Last Roman panels. Mac evidence includes 35 in-game API checks and user-reported manual
+navigation, slot, TDD integration, and edge-case results. See the closure section below and TWASE's
+`docs/windows-port.md` and `docs/macos/addresses.md`. The procedures below remain available for reproduction.
 
 ## Setup
 
@@ -25,7 +26,7 @@ backend (`src/platform/macos/dylib/Hooks/CampaignUI.cpp`, TWASE `f14d33b`) has n
 ## Checks
 
 | # | Check | Pass | Mac-specific risk |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | 1 | `campaign_ui_dev.url()`, open building, unit, and tech links | Probe page (cream on black) shows the URL with a suffix; server logs `GET /seen?url=...%23<suffix>` | Unknown whether Feral opens links in the game or in Safari; either is fine, note which |
 | 2 | `campaign_ui_dev.restore_url()`, open a new link | The native site opens; the URL matches the `Native URL=` log line | Feral's `EncyclopaediaBaseURL` preference can replace the native prefix; the hook should keep and restore that value |
 | 3 | `slots(2, 2)`, reselect, `inspect()` | Every card 2 visible | Cleanup uses the per-slot clear function (`0x10345b30c`), unlike Windows |
@@ -57,9 +58,32 @@ suffix format for `lua-api.md`), which browser opened, `inspect()` output per tr
 results to TWASE's `docs/macos/addresses.md` (Campaign UI controls section). Remove the harness afterwards with
 `tools/deploy.sh --remove campaign_ui_dev`.
 
-## Still open on both platforms
+## Mac restart checkpoint (2026-10-28)
 
-- Expansion above vanilla needs a UI layout with more `building_slot_N` widgets and campaign data with those slots.
-  Done on Windows with The Dawnless Days (12/9); on the Mac it's check 11.
-- `lua tests/campaign_ui_dev.lua` has not been rerun since `b115c07` (no Lua on the Windows machine); run it on the
-  Mac.
+- Updated standalone Lua regressions passed after `b115c07`.
+- The campaign loaded; hook installation and all 35 native API checks passed, restoring the original settings.
+- Screen-capture permission was unavailable to the running session. Restart the session after granting permission,
+  then continue the acceptance table above; do not infer its UI/navigation passes from the API result.
+- The disposable game exited with status 0 after a quit request. The probe server was stopped and the deployed
+  debug mod removed; redeploy/restart them for the next run. No production code was changed during this initial smoke.
+- Evidence: TWASE log `twase-2026-10-28-11-43-50.log`; detailed checkpoint in TWASE `docs/macos/addresses.md`.
+
+## Manual acceptance and closure (2026-10-28)
+
+- After restarting, the user reported URL override/reset and the exercised slot-limit cases passed.
+- The user also confirmed expanded slots work in The Dawnless Days with the requested `slots(12, 9)` override.
+  This closes the Mac expansion-layout prerequisite for the exercised TDD case, not every slot or layout.
+- The updated harness includes TDD's `main_attila_map` entrypoint; manual `require` is no longer needed.
+- After deploying `tdd_twase_slots.pack`, the user confirmed automatic 12/9 slot expansion and working TDD
+  encyclopedia navigation, without console setup or TDD's Windows-only executable patcher.
+- The user also reported verifying the remaining edge cases. These are manual user-reported results, not an
+  additional automated trace or exhaustive per-slot record.
+- The user considers acceptance complete and requested PRs. No blocking production defect remains known.
+
+## Remaining coverage
+
+- Charlemagne and The Last Roman settlement panels remain untested on both platforms and are explicitly
+  deferred by the user, not marked passed.
+- TDD expansion-layout integration passed on Windows and, by user report, macOS.
+- The debug harness was redeployed for manual testing; remove it afterward with
+  `tools/deploy.sh --remove campaign_ui_dev`.
