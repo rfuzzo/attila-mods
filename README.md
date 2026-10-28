@@ -8,4 +8,5 @@ Personal mods and tools for Total War: ATTILA on macOS and Windows.
 - `tools/twpack` – pack tool (list, extract, DB ↔ TSV, build), on [rpfm_lib](https://github.com/Frodo45127/rpfm)
 - `tools/` – deploy and launch scripts: `deploy.sh` / `play.sh` on macOS, `deploy.ps1` / `play.ps1` (`play.cmd` to double-click) on Windows, `build-packs.sh` rebuilds `packs/` (both)
 - `mods/` – mod sources (see `docs/` for plans)
+- Opt-in URL/slot feature tests: [campaign UI test guide](docs/TEST-campaign-ui.md). Deploy `campaign_ui_dev` only for testing; it is not enabled by the normal play/deploy commands.
 - `extracted/` – unpacked game and mod files for reference, git-ignored
