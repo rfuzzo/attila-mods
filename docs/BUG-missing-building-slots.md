@@ -4,6 +4,11 @@ Status 2026-10-18: won't fix. The towns have no room for another building plot, 
 (vanilla, inherited by Fireforged). A patched startpos that added the slots was tried and removed: the game had the slots,
 but the settlement panel didn't show them. Investigated with `twpack esf dump` (see below).
 
+Update 2026-10-28: the settlement cards also cap the slots they show, at 6 for the province capital and 4 elsewhere
+(the card's bound at `+0x48`, see [REVIEW-tdd-slot-patcher.md](REVIEW-tdd-slot-patcher.md)); TWASE's
+`twase.set_max_slots_major` / `_minor` lift it, and The Dawnless Days shows 12/9 working with its own startpos and
+layout. That cap doesn't explain the Argentoratum test below (3 → 4 stays within it), so the cause there is still open.
+
 ## Symptom
 
 Argentoratum (`att_reg_maxima_sequanorum_argentoratum`) has 3 building slots in game, while the other minor settlements have 4.

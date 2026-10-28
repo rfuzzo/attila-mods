@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TWASE encyclopedia hook test</title>
+<style>
+/* The in-game browser panel shows an unstyled page as black text on black. */
+html, body { background: #000; color: #faefc9; }
+body { font: 18px/1.5 sans-serif; max-width: 60em; margin: 2em auto; padding: 0 1em; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; border: 1px solid; padding: 1em; color: #fff; }
+</style>
+</head>
+<body>
+<h1>TWASE encyclopedia hook test</h1>
+<p>The local test page loaded. This is a navigation check only if you reached it by opening an encyclopedia link
+<strong>inside the game</strong>, not by browsing here directly.</p>
+<h2>Complete URL received by the browser</h2>
+<pre id="url"></pre>
+<h2>Game-appended fragment</h2>
+<pre id="fragment"></pre>
+<p id="status"></p>
+<p>Try links from two different unit/building/technology entries. The page suffix should change. A fragment is
+not sent to the HTTP server, so this page reports its full URL back as a <code>GET /seen?url=...</code> request
+(a harmless 404). That server line, or the display here, is the evidence; a request for <code>/</code> alone cannot
+verify it.</p>
+<p>Then run <code>campaign_ui_dev.restore_url()</code> in the TWASE console and open a new link. It must no longer
+open this test page. An already-open page is not expected to change.</p>
+<noscript>JavaScript is disabled. Inspect the browser address bar for the complete URL and page fragment instead.</noscript>
+<script>
+(function () {
+    function show(id, text) {
+        var element = document.getElementById(id);
+        if (typeof element.textContent !== "undefined") element.textContent = text;
+        else element.innerText = text;
+    }
+    function render() {
+        show("url", window.location.href);
+        show("fragment", window.location.hash || "(empty)");
+        show("status", window.location.hash.length > 1
+            ? "A page suffix is present. Confirm it came from the game link you clicked."
+            : "No page suffix yet. Open an encyclopedia entry from inside the game.");
+        new Image().src = "/seen?url=" + encodeURIComponent(window.location.href);
+    }
+    window.onhashchange = render;
+    render();
+}());
+</script>
+</body>
+</html>
