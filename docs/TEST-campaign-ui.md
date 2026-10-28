@@ -138,7 +138,8 @@ data with the intended slots. The hooks do not create either. A vanilla six/four
 eight/six expansion; missing widgets are not a hook failure. Inspect reports existing widget capacity to expose this
 prerequisite. Do not assume this fixes every missing-plot issue described in [BUG-missing-building-slots.md](BUG-missing-building-slots.md).
 
-The Dawnless Days (TDD) ships all three for 12/9: a `settlement_panel` with `building_slot_1`–`12`, a startpos with
+The Dawnless Days (TDD, analysis in [REVIEW-tdd-slot-patcher.md](REVIEW-tdd-slot-patcher.md)) ships all three for
+12/9: a `settlement_panel` with `building_slot_1`–`12`, a startpos with
 12 slots per province capital and 9 elsewhere, and a Windows patcher (`TDD_12_9_slots_A.exe`, started from
 `lua_scripts/extend_slots.lua` on `UICreated`) that rewrites the same bound at `+0x48` in the game's memory: 6 → 12
 in SetAsCapital, 4 → 9 in the callback's constructor. `tdd_twase_slots` replaces it with TWASE's API: build it with

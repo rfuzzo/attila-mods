@@ -36,6 +36,19 @@ backend (`src/platform/macos/dylib/Hooks/CampaignUI.cpp`, TWASE `f14d33b`) has n
 | 8 | `slots(8, 6)` on the vanilla layout | Stays 6/4, no crash (missing widgets are expected) | |
 | 9 | Load another save with an override set, quit to menu, exit the game | Override persists (by design), no crash on exit | Hooks stay installed during Mac teardown |
 | 10 | One settlement panel in Charlemagne and The Last Roman with an override | Same as 3 | Also still open on Windows |
+| 11 | The Dawnless Days with `tdd_twase_slots` (below), no console input | Capital cards 12 slots, others 9; `reset_slots()` gives 6/4; unit and building encyclopedia links open TDD's entries on `rai4u.de/tde` | Whether TDD runs on Feral's port at all; its Windows patcher can't run there, so without the hook it stays 6/4 |
+
+### The Dawnless Days (check 11)
+
+Passed on Windows 2026-10-28 ([REVIEW-tdd-slot-patcher.md](REVIEW-tdd-slot-patcher.md)). Copy TDD's six
+`tdd_pack*_v1.1.0.pack` files into `TotalWarAttilaData/data`, run `tools/deploy.sh tdd_twase_slots` (builds
+`data/tdd_twase_slots.pack`) next to `campaign_ui_dev`, and start with `twase-launch.command --skip-launcher --mods
+<list>` where the list has a `mod "…";` line for each TDD pack and `tdd_twase_slots.pack` (it overrides no TDD file,
+so the order doesn't matter). TDD sends Lua `print` to its own `tdd.log.txt` (in the game's working directory), not
+the TWASE log: expect `[tdd_twase_slots] Slot limits 12/9 set through TWASE` and `Encyclopedia URL
+https://www.rai4u.de/tde`. A `TWASE slot limits unavailable` line means the hook isn't installed; the fallback then
+starts TDD's `.exe` through `os.execute`, which fails on macOS (TDD writes `TDD_12_9_slots_A.exe` into that directory
+first). TDD's campaign is `main_attila_map`; `campaign_ui_dev` has a stub for it.
 
 ## Report
 
@@ -46,6 +59,7 @@ results to TWASE's `docs/macos/addresses.md` (Campaign UI controls section). Rem
 
 ## Still open on both platforms
 
-- Expansion above vanilla needs a UI layout with `building_slot_7`/`8` and campaign data with those slots.
+- Expansion above vanilla needs a UI layout with more `building_slot_N` widgets and campaign data with those slots.
+  Done on Windows with The Dawnless Days (12/9); on the Mac it's check 11.
 - `lua tests/campaign_ui_dev.lua` has not been rerun since `b115c07` (no Lua on the Windows machine); run it on the
   Mac.
