@@ -83,7 +83,8 @@ function dev.api()
 		twase.clear_max_slots();
 		check(twase.get_max_slots_major() == nil and twase.get_max_slots_minor() == nil, "native slot defaults");
 		check(twase.set_max_slots_major(8) == 8 and twase.set_max_slots_minor(6) == 6, "independent slot overrides");
-		for _, invalid in ipairs({0, -1, 21, 1.5, "8", true, {}, math.huge, -math.huge, 0/0}) do
+		-- The game's Lua has no math.huge.
+		for _, invalid in ipairs({0, -1, 21, 1.5, "8", true, {}, 1/0, -1/0, 0/0}) do
 			for _, setter in ipairs({twase.set_max_slots_major, twase.set_max_slots_minor}) do
 				check(not pcall(setter, invalid) and twase.get_max_slots_major() == 8 and
 					twase.get_max_slots_minor() == 6, "invalid slot input leaves both values unchanged");
@@ -107,7 +108,7 @@ function dev.url(url)
 		remember();
 		local active = twase.set_encyclopedia_url(url or "http://127.0.0.1:18765/#");
 		log("URL=%s; now open a NEW encyclopedia link from a unit/building/technology card", active);
-		log("The local page must show the game's appended suffix; a getter or manually opened browser tab is not a pass");
+		log("The page and its GET /seen?url=... server line must show the game's appended suffix");
 		return active;
 	end);
 end;

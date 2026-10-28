@@ -74,10 +74,14 @@ campaign_ui_dev.url()
 ```
 
 This sets `http://127.0.0.1:18765/#`. Close the console and open an **encyclopedia link from the game**, for example
-from a unit or building card. The page titled **TWASE encyclopedia hook test** must appear and show the complete
-URL plus a nonempty game-appended suffix. Try a second entry and a technology/help link; confirm the suffix changes
-appropriately. Capture the displayed URL/screenshot. Browsing to the page directly, reading the setter return, or
-seeing only `GET /` in the HTTP log is not a navigation pass: URL fragments are not sent to the HTTP server.
+from a unit or building card. The Steam build loads it in the game's own browser panel (Steam's embedded HTML
+surface); other platforms hand it to the default system browser. The page titled **TWASE encyclopedia hook test**
+(cream text on black, like the real encyclopedia) must show the complete URL plus a nonempty game-appended suffix,
+and the HTTP server must log the same URL as `GET /seen?url=http%3A%2F%2F127.0.0.1%3A18765%2F%23<suffix>` (a 404 by
+design). Try a second entry and a technology/help link; confirm the suffix changes appropriately. Capture the
+displayed URL or the `/seen` log lines. Browsing to the page directly, reading the setter return, or seeing only
+`GET /` in the HTTP log is not a navigation pass: URL fragments are not sent to the HTTP server. `GET /` without a
+following `/seen` line means the page was fetched but its script did not run.
 
 Then reset:
 
@@ -163,8 +167,8 @@ lua tests/campaign_ui_dev.lua
 
 The standalone Lua tests exercise the **debug harness's** restoration/error handling and UI-tree inspection using
 a simulated game API. They do not verify native game addresses, Windows hook installation, browser navigation, or
-real settlement rendering. The probe page uses no remote assets or telemetry; its script only displays the current
-browser URL and fragment.
+real settlement rendering. The probe page uses no remote assets; its script displays the current browser URL and
+fragment and reports the URL only to the loopback server that served the page (`/seen?url=...`).
 
 Local test-kit verification: `lua tests/campaign_ui_dev.lua` passed under Lua 5.4.8; the macOS deployment/removal
 commands were exercised with an isolated temporary home directory, without touching an installed game. The static
