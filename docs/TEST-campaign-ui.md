@@ -158,6 +158,8 @@ Do not include personal filesystem paths or whole unredacted logs unnecessarily.
 
 ## macOS and harness checks
 
+Mac status, differences, and the check list: [HANDOFF-campaign-ui-mac.md](HANDOFF-campaign-ui-mac.md).
+
 ```sh
 tools/deploy.sh campaign_ui_dev
 # Play interactively, then quit before removal.
