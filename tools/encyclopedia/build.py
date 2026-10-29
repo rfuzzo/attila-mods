@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Build the Fireforged Empire encyclopedia (a static site in encyclopedia/) from the game and mod data.
 
-Reads the git-ignored extracted/ folder (tools/extract-all.sh) and the unit card images in extracted/icons/
-(extracted here on the first run with twpack). Writes encyclopedia/: the site from tools/encyclopedia/site/, the
-unit data as JSON and the unit cards as JPEG. The game links entries as <base>#/unit/<main unit key>; the site
-routes on location.hash (tools/encyclopedia/site/app.js).
+Reads the git-ignored extracted/ folder (tools/extract-all.sh), the unit cards and building pictures in
+extracted/icons/ (extracted here on the first run with twpack) and Fireforged's startpos (recruitment areas, through
+`twpack esf dump`). Writes encyclopedia/: the site from tools/encyclopedia/site/, the units and building chains as
+JSON and their pictures as JPEG. The game links entries as <base>#/unit/<main unit key> and
+<base>#/building/<level><culture><subculture><faction>; the site routes on location.hash
+(tools/encyclopedia/site/app.js).
 
 usage: tools/encyclopedia/build.py [--no-images]
 """
@@ -29,11 +31,20 @@ TWPACK = REPO / "tools/twpack/target/release/twpack"
 GAME_DATA = Path.home() / "Library/Application Support/Steam/steamapps/common/Total War Attila/TotalWarAttilaData/data"
 WORKSHOP = Path.home() / "Library/Application Support/Steam/steamapps/workshop/content/325610"
 FIREFORGED_PACK = WORKSHOP / "2649271551/@Fireforged-Empire_1.pack"
+STARTPOS = "fireforged/1/campaigns/main_attila/startpos.esf"
 
 # Pack roots in extracted/, highest priority first: mod packs override the DLC packs, which override data.pack.
 DB_ROOTS = ["fireforged/ballast", "fireforged/1", "game/charlemagne", "game/belisarius", "game/data"]
 LOC_ROOTS = ["fireforged/ballast/text", "fireforged/1/text", "game/local_en/text"]
-ICON_ROOTS = ["icons/fireforged", "icons/game"]
+ICON_ROOTS = ["icons/fireforged", "icons/charlemagne", "icons/belisarius", "icons/game"]
+# (pack, folder in extracted/, picture folder in the pack); Fireforged ships unit cards but no building pictures
+ICON_SOURCES = [
+    (GAME_DATA / "data.pack", "icons/game", "ui/units/icons"),
+    (FIREFORGED_PACK, "icons/fireforged", "ui/units/icons"),
+    (GAME_DATA / "data.pack", "icons/game", "ui/buildings/icons"),
+    (GAME_DATA / "charlemagne.pack", "icons/charlemagne", "ui/buildings/icons"),
+    (GAME_DATA / "belisarius.pack", "icons/belisarius", "ui/buildings/icons"),
+]
 # multiplayer / test factions that share military groups with real ones
 PLACEHOLDER_FACTION = re.compile(r"_(blue|red|green|yellow|white|black|purple|orange)$")
 
@@ -103,37 +114,36 @@ def num(value, default=0):
     return int(number) if number == int(number) else round(number, 2)
 
 
-# --- unit cards ------------------------------------------------------------------------------------------------
+# --- pictures --------------------------------------------------------------------------------------------------
 
 def extract_icons():
-    """Unit card PNGs of data.pack and Fireforged into extracted/icons/ (once; delete the folder to refresh)."""
-    targets = [(GAME_DATA / "data.pack", "icons/game"), (FIREFORGED_PACK, "icons/fireforged")]
-    for pack, dest in targets:
-        if (EXTRACTED / dest).is_dir():
+    """Unit cards and building pictures of the packs into extracted/icons/ (once; delete the folder to refresh)."""
+    for pack, dest, folder in ICON_SOURCES:
+        if (EXTRACTED / dest / folder).is_dir():
             continue
         if not pack.is_file():
-            print(f"warning: {pack} not found, no unit cards from it", file=sys.stderr)
+            print(f"warning: {pack} not found, no {folder} from it", file=sys.stderr)
             continue
-        print(f"extracting unit cards from {pack.name}")
-        subprocess.run([str(TWPACK), "extract", str(pack), "-o", str(EXTRACTED / dest), "ui/units/icons/*"],
+        print(f"extracting {folder} from {pack.name}")
+        subprocess.run([str(TWPACK), "extract", str(pack), "-o", str(EXTRACTED / dest), f"{folder}/*"],
                        check=True, stdout=subprocess.DEVNULL)
 
 
-def icon_path(name):
+def icon_path(name, folder="ui/units/icons"):
     for root in ICON_ROOTS:
-        path = EXTRACTED / root / "ui/units/icons" / f"{name}.png"
+        path = EXTRACTED / root / folder / f"{name}.png"
         if path.is_file():
             return path
     return None
 
 
-def convert_icon(source, name):
-    """PNG card -> encyclopedia/img/units/<name>.jpg (JPEG flattens the transparency onto white, the card colour)."""
-    dest = OUT / "img/units" / f"{name}.jpg"
+def convert_icon(source, name, kind="units", quality=82):
+    """PNG -> encyclopedia/img/<kind>/<name>.jpg (JPEG flattens the transparency onto white, the card colour)."""
+    dest = OUT / "img" / kind / f"{name}.jpg"
     if dest.is_file() and dest.stat().st_mtime >= source.stat().st_mtime:
         return
     dest.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run(["sips", "-s", "format", "jpeg", "-s", "formatOptions", "82", str(source), "--out", str(dest)],
+    subprocess.run(["sips", "-s", "format", "jpeg", "-s", "formatOptions", str(quality), str(source), "--out", str(dest)],
                    check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
@@ -153,7 +163,50 @@ def campaign_of(key):
     return "main"
 
 
-def build_units(loc, images):
+def recruitment_areas(loc):
+    """Fireforged's areas of recruitment: region unit resources, which the startpos gives each region (a list per
+    region, shortly before its `regions_onscreen_<region>` name key). Units with a region_unit_resource_requirement
+    are only recruited in regions that have it. -> {resource: {key, name, provinces: [{name, regions}]}}"""
+    regions = {}
+    startpos = EXTRACTED / STARTPOS
+    if not startpos.is_file():
+        print(f"warning: {startpos} not found, no recruitment areas", file=sys.stderr)
+        return {}
+    dump = subprocess.run([str(TWPACK), "esf", "dump", str(startpos)], check=True, capture_output=True, text=True)
+    pending, distance = None, 0
+    for line in dump.stdout.splitlines():
+        line = line.strip()
+        if line.startswith("ascii[] ["):
+            pending, distance = re.findall(r'"([^"]*)"', line), 0
+            continue
+        if pending is not None:
+            distance += 1
+            match = re.match(r'ascii "regions_onscreen_(\S+)"', line)
+            if match:
+                for resource in pending:
+                    regions.setdefault(resource, []).append(match.group(1))
+                pending = None
+            elif distance > 8:
+                pending = None
+    province_of = {row["region"]: row["province"] for row in table("region_to_province_junctions")}
+    areas = {}
+    for resource, keys in regions.items():
+        provinces = {}
+        for region in keys:
+            province = province_of.get(region, "")
+            provinces.setdefault(province, []).append(loc.get(f"regions_onscreen_{region}", region))
+        name = loc.get(f"region_unit_resources_string_{resource}") or \
+            re.sub(r"(\D)(\d)", r"\1 \2", resource.removeprefix("AOR_").removeprefix("Auxilia_")).replace("_", " ")
+        areas[resource] = {
+            "key": resource,
+            "name": name,
+            "provinces": sorted(({"name": loc.get(f"provinces_onscreen_{p}", p), "regions": sorted(r)}
+                                 for p, r in provinces.items()), key=lambda e: e["name"]),
+        }
+    return areas
+
+
+def build_units(loc, images, factions):
     main_units = table("main_units", "unit")
     land_units = by(table("land_units", "key"), "key")
     melee = by(table("melee_weapons", "key"), "key")
@@ -163,7 +216,8 @@ def build_units(loc, images):
     shields = by(table("unit_shield_types", "key"), "key")
     mounts = by(table("mounts", "key"), "key")
     entities = by(table("battle_entities", "key"), "key")
-    factions = table("factions", "key")
+    subculture_of = {row["key"]: row.get("subculture", "") for row in factions}
+    areas = recruitment_areas(loc)
 
     abilities = {}
     for row in table("land_units_to_unit_abilites_junctions"):
@@ -205,6 +259,7 @@ def build_units(loc, images):
             building_names.setdefault(key[len("building_culture_variants_name_"):], text)
 
     def building_name(level):
+        """The name of a level's first culture variant (the unit page doesn't know the viewer's culture)."""
         if level in building_names:
             return building_names[level]
         # culture variants are keyed <level><culture...>; take the first that starts with the level key
@@ -319,7 +374,10 @@ def build_units(loc, images):
             "history": loc.get(f"unit_description_historical_texts_text_{lu.get('historical_description_text', '')}", ""),
             "strengths": [s.strip() for s in strengths.split("||") if s.strip()],
             "factions": [{"key": f, "name": loc.get(f"factions_screen_name_{f}", f)} for f in recruited_by],
-            "buildings": sorted({building_name(b) for b in buildings.get(key, ())}),
+            "subcultures": sorted({subculture_of[f] for f in recruited_by if subculture_of.get(f)}),
+            "buildings": sorted(({"level": b, "name": building_name(b)} for b in buildings.get(key, ())),
+                                key=lambda e: (e["name"], e["level"])),
+            "area": areas.get(mu.get("region_unit_resource_requirement", "")),
             "links": cultures.links(culture),
         }
         details[key] = entry
@@ -327,6 +385,222 @@ def build_units(loc, images):
 
     index.sort(key=lambda e: (e["name"].lower(), e["key"]))
     return index, details
+
+
+# --- buildings -------------------------------------------------------------------------------------------------
+
+CHAIN_CATEGORIES = {"military": "Military", "money": "Economy", "happiness": "Civic"}
+
+
+def format_effect(text, value):
+    """An effect's loc text with its value: %+n signed, %n plain, colour tags dropped."""
+    number = num(value)
+    signed = f"+{number}" if number > 0 else str(number)
+    text = text.replace("%+n", signed).replace("%n", str(abs(number) if "-%n" in text else number))
+    return re.sub(r"\[\[/?col(:[a-z_]+)?\]\]", "", text).strip()
+
+
+def effect_tone(effect, value):
+    """good / bad from the effect's icon: effects name a positive and a negative icon, and for effects where more is
+    worse (costs, squalor) the 'negative' icon is the one for positive values."""
+    icon = effect.get("icon" if num(value) >= 0 else "icon_negative", "")
+    return "bad" if "negative" in icon else "good" if "positive" in icon else ""
+
+
+def build_buildings(loc, images, factions, units):
+    levels = by(table("building_levels", "level_name"), "level_name")
+    chains = by(table("building_chains", "key"), "key")
+    effects = by(table("effects", "effect"), "effect")
+    subcultures = {row["subculture"]: row["culture"] for row in table("cultures_subcultures", "subculture")}
+    subculture_of = {row["key"]: row.get("subculture", "") for row in factions}
+
+    def expand(culture, subculture, faction):
+        """The subcultures an availability or variant row applies to (empty columns match everything)."""
+        if faction:
+            return {subculture_of[faction]} if subculture_of.get(faction) else set()
+        if subculture:
+            return {subculture}
+        return {sub for sub, cult in subcultures.items() if not culture or cult == culture}
+
+    # who may build a chain: availability rows -> sets -> chains; the campaign column limits rows to one campaign
+    chains_of_set = {}
+    for row in table("building_chain_availability_sets"):
+        chains_of_set.setdefault(row["id"], set()).add(row["building_chain"])
+    builders = {}
+    for row in table("building_chain_availabilities"):
+        for chain in chains_of_set.get(row["set_id"], ()):
+            if row["campaign"] and row["campaign"] != {"main": "main_attila", "bel": "bel_attila", "cha": "cha_attila"}[campaign_of(chain)]:
+                continue
+            builders.setdefault(chain, set()).update(expand(row["culture"], row["sub_culture"], row["faction"]))
+
+    variants = {}
+    for row in table("building_culture_variants", ("building", "culture", "subculture", "faction")):
+        variants.setdefault(row["building"], []).append(row)
+
+    upgrades, downgrades = {}, {}
+    for row in table("building_upgrades_junction"):
+        upgrades.setdefault(row["from"], []).append(row["to"])
+        downgrades.setdefault(row["to"], []).append(row["from"])
+    level_effects = {}
+    for row in table("building_effects_junction"):
+        level_effects.setdefault(row["building"], []).append(row)
+    level_units = {}
+    for row in table("building_units_allowed"):
+        level_units.setdefault(row["building"], set()).add(row["unit"])
+    garrison_groups = {}
+    for row in table("building_level_armed_citizenry_junctions"):
+        garrison_groups.setdefault(row["building_level"], []).append(row["unit_group"])
+    garrison_units = {}
+    for row in table("armed_citizenry_units_to_unit_groups_junctions"):
+        garrison_units.setdefault(row["unit_group"], []).append(row["unit"])
+    techs = {}
+    for row in table("building_level_required_technology_junctions"):
+        techs.setdefault(row["building_level_key"], []).append(row["technology_key"])
+    main_units = by(table("main_units", "unit"), "unit")
+
+    def unit_ref(key):
+        unit = units.get(key)
+        if unit:
+            return {"key": key, "name": unit["name"], "card": unit["card"], "subcultures": unit["subcultures"],
+                    "area": unit["area"]["name"] if unit["area"] else ""}
+        main = main_units.get(key, {})
+        name = loc.get(f"naval_units_onscreen_name_{main.get('naval_unit', '')}") or \
+            loc.get(f"land_units_onscreen_name_{main.get('land_unit', '')}") or key
+        return {"key": key, "name": name, "card": None, "subcultures": [], "missing": True}
+
+    def picture(icon):
+        """The variant's picture (the _large one, 220x155, if the game has it)."""
+        for name in (f"{icon}_large", icon):
+            source = icon_path(name, "ui/buildings/icons")
+            if source:
+                if images:
+                    convert_icon(source, name, "buildings", 60)
+                return name
+        return None
+
+    index, details, routes = [], {}, {}
+    for chain_key, chain in chains.items():
+        chain_levels = sorted((l for l in levels.values() if l["chain"] == chain_key),
+                              key=lambda l: (num(l["level"]), l["level_name"]))
+        # levels without a culture variant can't be built (Fireforged drops some vanilla branches that way)
+        chain_levels = [l for l in chain_levels if variants.get(l["level_name"])] or chain_levels
+        if not chain_levels:
+            continue
+        chain_builders = builders.get(chain_key)
+        if not chain_builders:
+            # settlement chains are given by the map, not built: their culture variants say whose they are (not the
+            # ruin's, level 0, which every culture has)
+            built = [level for level in chain_levels if num(level["level"]) > 0] or chain_levels
+            rows = [v for level in built for v in variants.get(level["level_name"], [])]
+            specific = [v for v in rows if v["culture"] or v["subculture"] or v["faction"]] or rows
+            chain_builders = {sub for v in specific for sub in expand(v["culture"], v["subculture"], v["faction"])}
+        if campaign_of(chain_key) == "main":
+            chain_builders = {sub for sub in chain_builders if not sub.startswith(("bel_", "cha_"))}
+        routes[chain_key] = chain_key
+        unit_refs = {}
+        level_entries = []
+        for level in chain_levels:
+            key = level["level_name"]
+            level_variants = []
+            for v in variants.get(key, []):
+                vid = key + v["culture"] + v["subculture"] + v["faction"]
+                routes[vid] = chain_key
+                level_variants.append({
+                    "id": vid,
+                    "subcultures": sorted(expand(v["culture"], v["subculture"], v["faction"])),
+                    "faction": v["faction"],
+                    "name": loc.get(f"building_culture_variants_name_{vid}") or key,
+                    "picture": picture(v["icon"]) if v.get("icon") else None,
+                    "short": loc.get(f"building_short_description_texts_short_description_{v.get('short_description', '')}", ""),
+                    "flavour": loc.get(f"building_flavour_texts_flavour_{v.get('flavour', '')}", ""),
+                })
+            routes[key] = chain_key
+            level_effects_list = []
+            for row in level_effects.get(key, []):
+                text = loc.get(f"effects_description_{row['effect']}")
+                if not text:
+                    continue
+                scope = loc.get(f"campaign_effect_scopes_localised_text_{row['effect_scope']}", "").strip()
+                level_effects_list.append({
+                    "text": format_effect(text, row["value"]) + (" " + scope if scope else ""),
+                    "tone": effect_tone(effects.get(row["effect"], {}), row["value"]),
+                })
+            recruits = sorted(level_units.get(key, ()))
+            garrison = sorted({u for g in garrison_groups.get(key, []) for u in garrison_units.get(g, [])})
+            for unit in recruits + garrison:
+                unit_refs.setdefault(unit, unit_ref(unit))
+            level_entries.append({
+                "key": key,
+                "tier": num(level["level"]) + 1,
+                "cost": num(level["create_cost"]),
+                "turns": num(level["create_time"]),
+                "upkeep": num(level["upkeep_cost"]),
+                "capital_only": level["only_in_capital"] == "true",
+                "religion": loc.get(f"religions_onscreen_{level['religion_requirement']}", level["religion_requirement"]),
+                "resource": loc.get(f"resources_onscreen_text_{level['resource_requirement']}", level["resource_requirement"]),
+                "techs": sorted({loc.get(f"technologies_onscreen_name_{t}", t) for t in techs.get(key, [])}),
+                "upgrades": [u for u in upgrades.get(key, []) if variants.get(u)],
+                "from": [u for u in downgrades.get(key, []) if variants.get(u)],
+                "variants": level_variants,
+                "effects": level_effects_list,
+                "units": recruits,
+                "garrison": garrison,
+            })
+
+        name = loc.get(f"building_chains_encyclopedia_name_{chain_key}") or \
+            loc.get(f"building_chains_chain_tooltip_{chain_key}") or chain_key
+        entry = {
+            "key": chain_key,
+            "name": name,
+            "description": loc.get(f"building_chains_encyclopedia_description_{chain_key}", "").replace("Placeholder description", ""),
+            "category": CHAIN_CATEGORIES.get(chain["chain_category"], "Other"),
+            "campaign": campaign_of(chain_key),
+            "builders": sorted(chain_builders),
+            "levels": level_entries,
+            "units": unit_refs,
+        }
+        details[chain_key] = entry
+        # the list shows each chain with the picture of its first tier, per subculture where they differ
+        looks = {}
+        for v in level_entries[0]["variants"]:
+            for sub in v["subcultures"]:
+                looks.setdefault(sub, [v["name"], v["picture"]])
+        first = level_entries[0]["variants"][0] if level_entries[0]["variants"] else {"name": name, "picture": None}
+        if all(l["key"].endswith("_ruin") for l in level_entries):
+            continue  # a culture's razed settlement: reachable from the game's links, not worth a place in the list
+        index.append({
+            "key": chain_key,
+            "name": name,
+            "category": entry["category"],
+            "campaign": entry["campaign"],
+            "builders": entry["builders"],
+            "tiers": len({l["tier"] for l in level_entries}),
+            "look": [first["name"], first["picture"]],
+            "looks": {sub: look for sub, look in looks.items() if look != [first["name"], first["picture"]]},
+        })
+
+    index.sort(key=lambda e: (e["name"].lower(), e["key"]))
+    names = {sub: loc.get(f"cultures_subcultures_name_{sub}", sub) for sub in subcultures}
+    return index, details, routes, names
+
+
+def name_buildings(units, chains, routes):
+    """A unit's buildings as its recruiters see them: only levels of chains one of their subcultures can build, named
+    after that subculture's variant. (building_units_allowed lists whole culture groups' units on shared levels.)"""
+    for unit in units.values():
+        subs = set(unit["subcultures"])
+        result = {}
+        for building in unit["buildings"]:
+            chain = chains.get(routes.get(building["level"], ""))
+            if not chain:
+                continue
+            if subs and not subs & set(chain["builders"]):
+                continue
+            level = next(l for l in chain["levels"] if l["key"] == building["level"])
+            names = [v["name"] for v in level["variants"] if not subs or subs & set(v["subcultures"])] or \
+                [v["name"] for v in level["variants"]] or [chain["name"]]
+            result[building["level"]] = {"level": building["level"], "chain": chain["key"], "name": names[0]}
+        unit["buildings"] = sorted(result.values(), key=lambda e: (e["name"], e["level"]))
 
 
 # --- output ----------------------------------------------------------------------------------------------------
@@ -356,10 +630,17 @@ def main():
     shutil.rmtree(OUT / "data", ignore_errors=True)
 
     loc = load_loc()
-    index, details = build_units(loc, images)
+    factions = table("factions", "key")
+    index, details = build_units(loc, images, factions)
+    building_index, chains, routes, subculture_names = build_buildings(loc, images, factions, details)
+    name_buildings(details, chains, routes)
+    for key, entry in chains.items():
+        write_json(OUT / "data/building" / f"{key}.json", entry)
+    write_json(OUT / "data/buildings.json", building_index)
     for key, entry in details.items():
         write_json(OUT / "data/unit" / f"{key}.json", entry)
     write_json(OUT / "data/units.json", index)
+    write_json(OUT / "data/building_routes.json", routes)
     # bar scale per stat: the 98th percentile of the grand campaign's units, so one siege engine doesn't flatten
     # every other bar (values above it fill the bar)
     combined = {
@@ -382,18 +663,27 @@ def main():
     write_json(OUT / "data/meta.json", {
         "built": time.strftime("%Y-%m-%d"),
         "units": len(index),
+        "buildings": len(building_index),
+        "aor_map": cultures.AOR_MAP,
         "stat_scale": stat_scale,
+        # the grand campaign's subcultures (of its att_ factions), the list's culture chips
+        "subcultures": {sub: subculture_names[sub] for sub in sorted(
+            {row.get("subculture") for row in factions if row["key"].startswith("att_fact_") and row.get("subculture")
+             and not PLACEHOLDER_FACTION.search(row["key"])}) if sub in subculture_names},
         "cultures": {cid: {"name": c[0], "links": cultures.links(cid)} for cid, c in cultures.CULTURES.items()},
     })
 
-    # drop cards no unit uses any more
-    used = {e["card"] for e in index if e["card"]}
-    for path in (OUT / "img/units").glob("*.jpg") if (OUT / "img/units").is_dir() else []:
-        if path.stem not in used:
-            path.unlink()
+    # drop pictures nothing uses any more
+    used = {"units": {e["card"] for e in index if e["card"]},
+            "buildings": {v["picture"] for c in chains.values() for l in c["levels"] for v in l["variants"] if v["picture"]}}
+    for kind, names in used.items():
+        for path in (OUT / "img" / kind).glob("*.jpg") if (OUT / "img" / kind).is_dir() else []:
+            if path.stem not in names:
+                path.unlink()
 
     with_card = sum(1 for e in index if e["card"])
-    print(f"{len(index)} units ({with_card} with a card) written to {OUT.relative_to(REPO)}/")
+    print(f"{len(index)} units ({with_card} with a card) and {len(building_index)} building chains written to "
+          f"{OUT.relative_to(REPO)}/")
 
 
 if __name__ == "__main__":

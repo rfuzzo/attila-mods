@@ -8,6 +8,8 @@ Charlemagne and Last Roman units, ...) are "other".
 """
 
 SITE = "https://late-roman.ru/fireforged-empire/units/"
+# the map of Fireforged's areas of recruitment, the same on every culture's "gaming information" page
+AOR_MAP = "https://late-roman.ru/attachments/Image/AOR2_5.jpg"
 
 # id -> (name, "screenshots and description" page, "gaming information" page or None)
 CULTURES = {

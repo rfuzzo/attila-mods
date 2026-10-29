@@ -1,12 +1,14 @@
 // Fireforged Empire encyclopedia. The game opens <base>#/unit/<main unit key> (and #/building/..., #/tech/...,
 // #/skill/..., #/character/..., #/tradition/..., #/manual/...), so everything routes on location.hash.
-// Data: data/units.json (the list), data/unit/<key>.json (one unit), data/meta.json (cultures, stat maxima).
+// Data: data/units.json (the list), data/unit/<key>.json (one unit), data/buildings.json (the chains),
+// data/building/<chain>.json (one chain with its levels), data/building_routes.json (level / variant / chain key ->
+// chain), data/meta.json (cultures, subcultures, stat maxima).
 (function () {
   "use strict";
 
   var view = document.getElementById("view");
   var cache = {};
-  var state = { campaign: "main", category: "", query: "", unused: false };
+  var state = { campaign: "main", category: "", query: "", unused: false, buildingCategory: "", sub: "" };
 
   var SOURCES = {
     recruit: "Recruitable",
@@ -51,12 +53,19 @@
 
   function markNav(route) {
     var links = document.querySelectorAll(".top-nav a");
+    var section = route.indexOf("unit") === 0 ? "#/units" : route.indexOf("building") === 0 ? "#/buildings" : "";
     for (var i = 0; i < links.length; i++) {
-      links[i].classList.toggle("active", route.indexOf("unit") === 0 && links[i].getAttribute("href") === "#/units");
+      links[i].classList.toggle("active", links[i].getAttribute("href") === section);
     }
   }
 
   // --- home ---------------------------------------------------------------------------------------------------
+
+  function buildingPicture(name, alt, cls) {
+    if (!name) return '<span class="' + (cls || "bld-pic") + ' none" aria-hidden="true"></span>';
+    return '<img class="' + (cls || "bld-pic") + '" src="img/buildings/' + encodeURIComponent(name) + '.jpg" alt="' +
+      escapeHtml(alt || "") + '" loading="lazy">';
+  }
 
   function home(meta, units) {
     setTitle("");
@@ -76,11 +85,16 @@
     render(
       '<section class="hero"><h1>Fireforged Empire Encyclopedia</h1>' +
       '<p>Every unit of the Fireforged Empire mod for Total War: ATTILA, with its stats, abilities, recruitment and ' +
-      'the mod\'s own historical descriptions. The unit links in the game lead here when the ' +
+      'the mod\'s own historical descriptions, and its buildings with their effects and recruits. The unit and ' +
+      'building links in the game lead here when the ' +
       '<code>fireforged_encyclopedia</code> TWASE mod is enabled. For screenshots and the authors\' notes on each ' +
       'culture, follow the links to the <a href="https://late-roman.ru/fireforged-empire/units/" target="_blank" ' +
       'rel="noopener">mod website</a>.</p></section>' +
-      '<h2>Units by culture</h2><div class="culture-grid">' + tiles + '</div>'
+      '<h2>Units by culture</h2><div class="culture-grid">' + tiles + '</div>' +
+      '<h2 class="spaced">Buildings by culture</h2><div class="chips">' +
+      Object.keys(meta.subcultures).map(function (sub) {
+        return '<a class="chip" href="#/buildings/' + sub + '">' + escapeHtml(meta.subcultures[sub]) + "</a>";
+      }).join("") + "</div>"
     );
   }
 
@@ -210,7 +224,16 @@
       facts.push(["Available as", u.sources.length ? u.sources.map(function (s) { return SOURCES[s] || s; }).join(", ")
         : "not recruitable in Fireforged"]);
       var factions = u.factions.map(function (f) { return "<li>" + escapeHtml(f.name) + "</li>"; }).join("");
-      var buildings = u.buildings.map(function (b) { return "<li>" + escapeHtml(b) + "</li>"; }).join("");
+      var buildings = u.buildings.map(function (b) {
+        return '<li><a href="#/building/' + encodeURIComponent(b.level) + '">' + escapeHtml(b.name) + "</a></li>";
+      }).join("");
+      var area = u.area ? '<section class="section"><h2>Area of recruitment</h2>' +
+        "<p>Recruitable only in regions of the area <strong>" + escapeHtml(u.area.name) + "</strong>:</p>" +
+        '<ul class="plain-list">' + u.area.provinces.map(function (p) {
+          return "<li><strong>" + escapeHtml(p.name) + "</strong>: " + p.regions.map(escapeHtml).join(", ") + "</li>";
+        }).join("") + "</ul>" +
+        '<p class="links-inline"><a href="' + escapeHtml(meta.aor_map) + '" target="_blank" rel="noopener">Map of the ' +
+        "areas of recruitment ↗</a> (late-roman.ru)</p></section>" : "";
       var links = u.links.map(function (l) {
         return '<a href="' + escapeHtml(l.url) + '" target="_blank" rel="noopener">' + escapeHtml(l.title) + " ↗</a>";
       }).join("");
@@ -230,11 +253,195 @@
         (u.attributes.length ? '<section class="section"><h2>Attributes</h2>' + traits(u.attributes) + "</section>" : "") +
         (u.history ? '<section class="section"><h2>History</h2><p class="history">' + escapeHtml(u.history) + "</p></section>" : "") +
         (factions ? '<section class="section"><h2>Recruited by</h2><ul class="plain-list">' + factions + "</ul></section>" : "") +
+        area +
         (buildings ? '<section class="section"><h2>Recruited in</h2><ul class="plain-list">' + buildings + "</ul></section>" : "") +
         '<section class="section links"><h2>On the mod website</h2>' + links + "</section>" +
         '<p class="keys">' + escapeHtml(u.key) + (u.land_unit !== u.key ? " · land unit " + escapeHtml(u.land_unit) : "") + "</p>" +
         "</div></article>"
       );
+    });
+  }
+
+  // --- building list ------------------------------------------------------------------------------------------
+
+  function subName(meta, sub) { return meta.subcultures[sub] || sub.replace(/^[a-z]+_sub_cult_/, "").replace(/_/g, " "); }
+
+  function buildingList(meta, chains, sub) {
+    if (sub && !meta.subcultures[sub]) sub = "";
+    if (sub) state.sub = sub;
+    var title = sub ? subName(meta, sub) + " buildings" : "All buildings";
+    setTitle(title);
+    var chips = '<a class="chip' + (sub ? "" : " active") + '" href="#/buildings">All</a>' +
+      Object.keys(meta.subcultures).map(function (id) {
+        return '<a class="chip' + (id === sub ? " active" : "") + '" href="#/buildings/' + id + '">' +
+          escapeHtml(meta.subcultures[id]) + "</a>";
+      }).join("");
+    var categories = {};
+    chains.forEach(function (c) { categories[c.category] = true; });
+
+    render(
+      '<div class="list-head"><h1>' + escapeHtml(title) + '</h1><span class="count" id="count"></span></div>' +
+      '<div class="chips">' + chips + "</div>" +
+      '<div class="filters">' +
+      '<select id="f-campaign" aria-label="Campaign"><option value="main">Grand campaign</option>' +
+      '<option value="all">All campaigns</option><option value="bel">The Last Roman</option>' +
+      '<option value="cha">Age of Charlemagne</option></select>' +
+      '<select id="f-category" aria-label="Category"><option value="">All categories</option>' +
+      Object.keys(categories).sort().map(function (c) {
+        return '<option value="' + escapeHtml(c) + '">' + escapeHtml(c) + "</option>";
+      }).join("") + "</select></div>" +
+      '<div class="building-grid" id="grid"></div>'
+    );
+
+    var campaignSelect = document.getElementById("f-campaign");
+    var categorySelect = document.getElementById("f-category");
+    campaignSelect.value = state.campaign;
+    categorySelect.value = state.buildingCategory;
+
+    function update() {
+      state.campaign = campaignSelect.value;
+      state.buildingCategory = categorySelect.value;
+      var query = state.query.toLowerCase();
+      var shown = chains.filter(function (c) {
+        var look = (sub && c.looks[sub]) || c.look;
+        return (!sub || c.builders.indexOf(sub) >= 0) &&
+          (state.campaign === "all" || c.campaign === state.campaign) &&
+          (!state.buildingCategory || c.category === state.buildingCategory) &&
+          (!query || c.name.toLowerCase().indexOf(query) >= 0 || look[0].toLowerCase().indexOf(query) >= 0 ||
+            c.key.indexOf(query) >= 0);
+      });
+      document.getElementById("count").textContent = shown.length + " building chains" +
+        (state.query ? ' matching "' + state.query + '"' : "");
+      document.getElementById("grid").innerHTML = shown.length ? shown.map(function (c) {
+        var look = (sub && c.looks[sub]) || c.look;
+        return '<a class="building-tile" href="#/building/' + encodeURIComponent(c.key) + '">' +
+          buildingPicture(look[1], look[0]) + '<span class="name">' + escapeHtml(c.name) + "</span>" +
+          '<span class="sub">' + escapeHtml(c.category) + " · " + c.tiers + (c.tiers === 1 ? " tier" : " tiers") +
+          (look[0] !== c.name ? " · " + escapeHtml(look[0]) : "") + "</span></a>";
+      }).join("") : '<p class="empty">No buildings match.</p>';
+    }
+    campaignSelect.addEventListener("change", update);
+    categorySelect.addEventListener("change", update);
+    update();
+  }
+
+  // --- one building chain -------------------------------------------------------------------------------------
+
+  // the variant a subculture sees: one made for it, else the first
+  function variantFor(level, sub) {
+    var own = level.variants.filter(function (v) { return v.subcultures.indexOf(sub) >= 0; });
+    var general = own.filter(function (v) { return !v.faction; });
+    return general[0] || own[0] || level.variants[0] || { name: level.key, picture: null, short: "", flavour: "" };
+  }
+
+  // the game's key is <level><culture><subculture><faction>; our own links use the level or chain key
+  function resolveBuilding(routes, id) {
+    if (routes[id]) return { chain: routes[id], id: id };
+    var best = "";
+    Object.keys(routes).forEach(function (key) {
+      if (key.length > best.length && id.indexOf(key) === 0) best = key;
+    });
+    return best ? { chain: routes[best], id: best } : null;
+  }
+
+  function unitTiles(chain, keys, sub) {
+    var units = keys.map(function (k) { return chain.units[k]; }).filter(function (u) {
+      return u && (!sub || !u.subcultures.length || u.subcultures.indexOf(sub) >= 0);
+    });
+    if (!units.length) return "";
+    return '<div class="unit-grid">' + units.map(function (u) {
+      var inner = cardImage(u.card, u.name) + '<span class="name">' + escapeHtml(u.name) + "</span>" +
+        (u.area ? '<span class="sub">only in ' + escapeHtml(u.area) + "</span>" : "");
+      return u.missing ? '<span class="unit-tile">' + inner + "</span>" :
+        '<a class="unit-tile" href="#/unit/' + encodeURIComponent(u.key) + '">' + inner + "</a>";
+    }).join("") + "</div>";
+  }
+
+  function buildingPage(meta, routes, id) {
+    var target = resolveBuilding(routes, id);
+    if (!target) return Promise.reject(new Error("not found"));
+    return load("data/building/" + encodeURIComponent(target.chain) + ".json").then(function (chain) {
+      var level = null, variant = null;
+      chain.levels.forEach(function (l) {
+        if (l.key === target.id) level = l;
+        l.variants.forEach(function (v) { if (v.id === target.id) { level = l; variant = v; } });
+      });
+      level = level || chain.levels.filter(function (l) { return l.variants.length; })[0] || chain.levels[0];
+
+      // whose view: the variant the game asked for, else the subculture picked before, else the first builder
+      var subs = chain.builders.filter(function (s) { return meta.subcultures[s]; });
+      if (!subs.length) subs = chain.builders.slice();
+      var sub = variant && variant.subcultures.filter(function (s) { return subs.indexOf(s) >= 0; })[0];
+      if (!sub) sub = subs.indexOf(state.sub) >= 0 ? state.sub : subs[0] || "";
+      if (variant && subs.indexOf(sub) < 0) subs.push(sub);
+      state.sub = sub;
+      var shown = variant || variantFor(level, sub);
+
+      function levelLink(key) {
+        var l = chain.levels.filter(function (x) { return x.key === key; })[0];
+        return l ? '<a href="#/building/' + encodeURIComponent(key) + '">' + escapeHtml(variantFor(l, sub).name) + "</a>" : escapeHtml(key);
+      }
+
+      var tiers = {};
+      chain.levels.forEach(function (l) { (tiers[l.tier] = tiers[l.tier] || []).push(l); });
+      var tree = Object.keys(tiers).sort(function (a, b) { return a - b; }).map(function (t) {
+        return '<div class="tier"><span class="tier-label">Tier ' + t + '</span><div class="tier-levels">' +
+          tiers[t].map(function (l) {
+            var v = variantFor(l, sub);
+            return '<a class="level-card' + (l === level ? " active" : "") + '" href="#/building/' + encodeURIComponent(l.key) + '">' +
+              buildingPicture(v.picture, v.name, "level-pic") + '<span class="name">' + escapeHtml(v.name) + "</span></a>";
+          }).join("") + "</div></div>";
+      }).join("");
+
+      var facts = [["Cost", level.cost], ["Construction time", level.turns + (level.turns === 1 ? " turn" : " turns")]];
+      if (level.upkeep) facts.push(["Upkeep", level.upkeep]);
+      if (level.capital_only) facts.push(["Only in", "the provincial capital"]);
+      if (level.religion) facts.push(["Religion", level.religion]);
+      if (level.resource) facts.push(["Resource", level.resource]);
+
+      var selector = subs.length > 1 ? '<label class="view-as">Culture <select id="f-sub">' + subs.map(function (s) {
+        return '<option value="' + escapeHtml(s) + '"' + (s === sub ? " selected" : "") + ">" + escapeHtml(subName(meta, s)) + "</option>";
+      }).join("") + "</select></label>" : "";
+
+      var effects = level.effects.length ? '<ul class="effects">' + level.effects.map(function (e) {
+        return '<li class="' + e.tone + '">' + escapeHtml(e.text) + "</li>";
+      }).join("") + "</ul>" : '<p class="empty">No effects.</p>';
+      var recruits = unitTiles(chain, level.units, sub);
+      var garrison = unitTiles(chain, level.garrison, "");
+
+      setTitle(shown.name);
+      render(
+        '<div class="crumbs"><a href="#/buildings' + (meta.subcultures[sub] ? "/" + sub : "") + '">' +
+        escapeHtml(meta.subcultures[sub] ? subName(meta, sub) + " buildings" : "Buildings") + "</a> · " + escapeHtml(chain.name) + "</div>" +
+        '<div class="building-head"><div><h1>' + escapeHtml(shown.name) + "</h1>" +
+        '<p class="subtitle">' + escapeHtml(chain.name) + " · " + escapeHtml(chain.category) + " · Tier " + level.tier + "</p></div>" +
+        selector + "</div>" +
+        '<article class="unit building"><aside class="unit-side">' + buildingPicture(shown.picture, shown.name, "bld-pic large").replace(' loading="lazy"', "") +
+        '<dl class="facts">' + facts.map(function (f) { return "<dt>" + f[0] + "</dt><dd>" + escapeHtml(f[1]) + "</dd>"; }).join("") + "</dl>" +
+        "</aside><div class=\"unit-main\">" +
+        (shown.short ? '<p class="section short">' + escapeHtml(shown.short) + "</p>" : "") +
+        '<section class="section"><h2>Effects</h2>' + effects + "</section>" +
+        (level.techs.length || level.from.length || level.upgrades.length ? '<section class="section"><h2>Construction</h2><dl class="facts wide">' +
+          (level.from.length ? "<dt>Upgrades from</dt><dd>" + level.from.map(levelLink).join(", ") + "</dd>" : "") +
+          (level.upgrades.length ? "<dt>Upgrades to</dt><dd>" + level.upgrades.map(levelLink).join(", ") + "</dd>" : "") +
+          (level.techs.length ? "<dt>Needs technology</dt><dd>" + level.techs.map(escapeHtml).join(" or ") + "</dd>" : "") +
+          "</dl></section>" : "") +
+        (recruits ? '<section class="section"><h2>Recruits</h2>' + recruits + "</section>" :
+          level.units.length ? '<section class="section"><h2>Recruits</h2><p class="empty">Nothing for this culture.</p></section>' : "") +
+        (garrison ? '<section class="section"><h2>Garrison</h2>' + garrison + "</section>" : "") +
+        (shown.flavour ? '<section class="section"><h2>History</h2><p class="history">' + escapeHtml(shown.flavour) + "</p></section>" : "") +
+        (chain.description ? '<section class="section"><h2>About the chain</h2><p class="history">' + escapeHtml(chain.description) + "</p></section>" : "") +
+        "</div></article>" +
+        '<section class="section"><h2>The chain</h2><div class="tree">' + tree + "</div></section>" +
+        '<p class="keys">' + escapeHtml(shown.id || level.key) + " · chain " + escapeHtml(chain.key) + "</p>"
+      );
+
+      var select = document.getElementById("f-sub");
+      if (select) select.addEventListener("change", function () {
+        state.sub = select.value;
+        location.hash = "#/building/" + encodeURIComponent(level.key);
+        if (target.id === level.key) route();
+      });
     });
   }
 
@@ -244,7 +451,7 @@
     setTitle("Not covered yet");
     render(
       '<div class="notice"><h1>' + escapeHtml(what) + "</h1>" +
-      "<p>This encyclopedia covers Fireforged's units so far. The game asked for <code>" + escapeHtml(route) + "</code>.</p>" +
+      "<p>This encyclopedia covers Fireforged's units and buildings so far. The game asked for <code>" + escapeHtml(route) + "</code>.</p>" +
       '<p><a href="https://atenc.totalwar.com/#/' + escapeHtml(route) + '" target="_blank" rel="noopener">Open it in the vanilla ' +
       'encyclopedia ↗</a> (shows the unmodded game, which may differ from Fireforged).</p>' +
       '<p><a href="#/units">Browse the units</a></p></div>'
@@ -269,7 +476,17 @@
             render('<div class="notice"><h1>Unit not found</h1><p>No land unit <code>' + escapeHtml(parts.slice(1).join("/")) +
               '</code> in Fireforged\'s data. Ships are not covered yet.</p><p><a href="#/units">Browse the units</a></p></div>');
           });
-        case "building": case "buildings": return notCovered(path, "Buildings are not covered yet");
+        case "buildings":
+          return load("data/buildings.json").then(function (chains) { return buildingList(meta, chains, parts[1] || ""); });
+        case "building":
+          return load("data/building_routes.json").then(function (routes) {
+            return buildingPage(meta, routes, parts.slice(1).join("/"));
+          }).catch(function () {
+            setTitle("Unknown building");
+            render('<div class="notice"><h1>Building not found</h1><p>No building <code>' + escapeHtml(parts.slice(1).join("/")) +
+              "</code> in Fireforged's data.</p>" + '<p><a href="https://atenc.totalwar.com/#/' + escapeHtml(path) +
+              '" target="_blank" rel="noopener">Try the vanilla encyclopedia ↗</a> · <a href="#/buildings">Browse the buildings</a></p></div>');
+          });
         case "tech": case "techs": return notCovered(path, "Technologies are not covered yet");
         case "skill": case "skills": return notCovered(path, "Skills are not covered yet");
         case "character": case "characters": return notCovered(path, "Characters are not covered yet");
@@ -286,10 +503,10 @@
   document.getElementById("search-input").addEventListener("input", function (event) {
     state.query = event.target.value.trim();
     var path = (location.hash || "").replace(/^#\/?/, "");
-    if (path.indexOf("units") === 0) {
+    if (path.indexOf("units") === 0 || path.indexOf("buildings") === 0) {
       route();
     } else {
-      location.hash = "#/units";
+      location.hash = path.indexOf("building") === 0 ? "#/buildings" : "#/units";
     }
   });
   window.addEventListener("hashchange", route);
