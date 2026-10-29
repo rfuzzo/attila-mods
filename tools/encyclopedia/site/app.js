@@ -2,13 +2,14 @@
 // #/skill/..., #/character/..., #/tradition/..., #/manual/...), so everything routes on location.hash.
 // Data: data/units.json (the list), data/unit/<key>.json (one unit), data/buildings.json (the chains),
 // data/building/<chain>.json (one chain with its levels), data/building_routes.json (level / variant / chain key ->
-// chain), data/meta.json (cultures, subcultures, stat maxima).
+// chain), data/techs.json (the technology trees), data/tech/<set>.json (one tree), data/tech_routes.json (node /
+// technology / set key -> tree), data/meta.json (cultures, subcultures, stat maxima).
 (function () {
   "use strict";
 
   var view = document.getElementById("view");
   var cache = {};
-  var state = { campaign: "main", category: "", query: "", unused: false, buildingCategory: "", sub: "" };
+  var state = { campaign: "main", category: "", query: "", unused: false, buildingCategory: "", sub: "", techView: {} };
 
   var SOURCES = {
     recruit: "Recruitable",
@@ -53,7 +54,8 @@
 
   function markNav(route) {
     var links = document.querySelectorAll(".top-nav a");
-    var section = route.indexOf("unit") === 0 ? "#/units" : route.indexOf("building") === 0 ? "#/buildings" : "";
+    var section = route.indexOf("unit") === 0 ? "#/units" : route.indexOf("building") === 0 ? "#/buildings" :
+      route.indexOf("tech") === 0 ? "#/techs" : "";
     for (var i = 0; i < links.length; i++) {
       links[i].classList.toggle("active", links[i].getAttribute("href") === section);
     }
@@ -85,8 +87,8 @@
     render(
       '<section class="hero"><h1>Fireforged Empire Encyclopedia</h1>' +
       '<p>Every unit of the Fireforged Empire mod for Total War: ATTILA, with its stats, abilities, recruitment and ' +
-      'the mod\'s own historical descriptions, and its buildings with their effects and recruits. The unit and ' +
-      'building links in the game lead here when the ' +
+      'the mod\'s own historical descriptions, its buildings with their effects and recruits, and its technology ' +
+      'trees. The unit, building and technology links in the game lead here when the ' +
       '<code>fireforged_encyclopedia</code> TWASE mod is enabled. For screenshots and the authors\' notes on each ' +
       'culture, follow the links to the <a href="https://late-roman.ru/fireforged-empire/units/" target="_blank" ' +
       'rel="noopener">mod website</a>.</p></section>' +
@@ -94,7 +96,8 @@
       '<h2 class="spaced">Buildings by culture</h2><div class="chips">' +
       Object.keys(meta.subcultures).map(function (sub) {
         return '<a class="chip" href="#/buildings/' + sub + '">' + escapeHtml(meta.subcultures[sub]) + "</a>";
-      }).join("") + "</div>"
+      }).join("") + "</div>" +
+      '<h2 class="spaced">Technologies</h2><p><a href="#/techs">The technology trees of every culture and faction</a></p>'
     );
   }
 
@@ -424,7 +427,9 @@
         (level.techs.length || level.from.length || level.upgrades.length ? '<section class="section"><h2>Construction</h2><dl class="facts wide">' +
           (level.from.length ? "<dt>Upgrades from</dt><dd>" + level.from.map(levelLink).join(", ") + "</dd>" : "") +
           (level.upgrades.length ? "<dt>Upgrades to</dt><dd>" + level.upgrades.map(levelLink).join(", ") + "</dd>" : "") +
-          (level.techs.length ? "<dt>Needs technology</dt><dd>" + level.techs.map(escapeHtml).join(" or ") + "</dd>" : "") +
+          (level.techs.length ? "<dt>Needs technology</dt><dd>" + level.techs.map(function (t) {
+            return '<a href="#/tech/' + encodeURIComponent(t.key) + '">' + escapeHtml(t.name) + "</a>";
+          }).join(" or ") + "</dd>" : "") +
           "</dl></section>" : "") +
         (recruits ? '<section class="section"><h2>Recruits</h2>' + recruits + "</section>" :
           level.units.length ? '<section class="section"><h2>Recruits</h2><p class="empty">Nothing for this culture.</p></section>' : "") +
@@ -445,13 +450,159 @@
     });
   }
 
+  // --- technology trees ---------------------------------------------------------------------------------------
+
+  var CAMPAIGN_NAMES = { main: "Grand campaign", bel: "The Last Roman", cha: "Age of Charlemagne" };
+
+  function techIcon(icon, cls) {
+    if (!icon) return '<span class="' + (cls || "tech-icon") + ' none" aria-hidden="true"></span>';
+    return '<img class="' + (cls || "tech-icon") + '" src="img/techs/' + encodeURIComponent(icon) + '.png" alt="" loading="lazy">';
+  }
+
+  function techList(trees) {
+    setTitle("Technologies");
+    var groups = [
+      ["Culture trees", trees.filter(function (t) { return t.campaign === "main" && !t.faction; })],
+      ["Faction trees", trees.filter(function (t) { return t.campaign === "main" && t.faction; })],
+      [CAMPAIGN_NAMES.bel, trees.filter(function (t) { return t.campaign === "bel"; })],
+      [CAMPAIGN_NAMES.cha, trees.filter(function (t) { return t.campaign === "cha"; })]
+    ];
+    render('<div class="list-head"><h1>Technologies</h1><span class="count">' + trees.length + " trees</span></div>" +
+      groups.filter(function (g) { return g[1].length; }).map(function (g) {
+        return '<h2 class="spaced">' + escapeHtml(g[0]) + '</h2><div class="tech-sets">' + g[1].map(function (t) {
+          return '<a class="tech-set" href="#/tech/' + encodeURIComponent(t.key) + '">' + techIcon(t.icon) +
+            '<span><span class="name">' + escapeHtml(t.who) + '</span><span class="sub">' + escapeHtml(t.kind || "Technologies") +
+            " · " + t.count + " technologies</span></span></a>";
+        }).join("") + "</div>";
+      }).join(""));
+  }
+
+  var TREE = { col: 150, row: 92, pad: 8 };
+
+  // the nodes a faction sees: its own, and the generic ones it has no own node in place of
+  function visibleNodes(tree, faction) {
+    var taken = {};
+    tree.nodes.forEach(function (n) { if (faction && n.faction === faction) taken[n.tier + "/" + n.row] = true; });
+    return tree.nodes.filter(function (n) {
+      return n.faction ? n.faction === faction : !taken[n.tier + "/" + n.row];
+    });
+  }
+
+  function techTree(tree, nodes, selected) {
+    var byKey = {};
+    nodes.forEach(function (n) { byKey[n.key] = n; });
+    var tiers = Math.max.apply(null, nodes.map(function (n) { return n.tier; })) + 1;
+    var rows = Math.max.apply(null, nodes.map(function (n) { return n.row; })) + 1;
+    var width = tiers * TREE.col, height = rows * TREE.row;
+    function x(n) { return n.tier * TREE.col + TREE.pad; }
+    function y(n) { return n.row * TREE.row + TREE.pad; }
+    var lines = [];
+    nodes.forEach(function (n) {
+      n.parents.forEach(function (p) {
+        var parent = byKey[p];
+        if (!parent) return;
+        var x1 = x(parent) + TREE.col - 2 * TREE.pad, y1 = y(parent) + 22, x2 = x(n), y2 = y(n) + 22;
+        var mid = (x1 + x2) / 2;
+        lines.push('<path d="M' + x1 + " " + y1 + " C" + mid + " " + y1 + " " + mid + " " + y2 + " " + x2 + " " + y2 + '"' +
+          (selected && (n === selected || parent === selected) ? ' class="hot"' : "") + "/>");
+      });
+    });
+    return '<div class="tree-scroll"><div class="tech-tree" style="width:' + width + "px;height:" + height + 'px">' +
+      '<svg width="' + width + '" height="' + height + '" aria-hidden="true">' + lines.join("") + "</svg>" +
+      nodes.map(function (n) {
+        return '<a class="tech-node' + (n === selected ? " active" : "") + '" style="left:' + x(n) + "px;top:" + y(n) +
+          'px" href="#/tech/' + encodeURIComponent(n.key) + '">' + techIcon(n.icon) + '<span class="name">' +
+          escapeHtml(n.name) + "</span></a>";
+      }).join("") + "</div></div>";
+  }
+
+  function techPage(routes, id) {
+    var set = routes[id];
+    if (!set) return Promise.reject(new Error("not found"));
+    return load("data/tech/" + encodeURIComponent(set) + ".json").then(function (tree) {
+      function factionName(key) {
+        return (tree.factions.filter(function (f) { return f.key === key; })[0] || { name: key }).name;
+      }
+      var node = tree.nodes.filter(function (n) { return n.key === id || n.tech === id; })[0] || null;
+      // whose tree: the faction of the node asked for, else the one picked before (generic: "")
+      var view = node && node.faction ? node.faction : state.techView[tree.key] || "";
+      if (node && !node.faction && view && visibleNodes(tree, view).indexOf(node) < 0) view = "";
+      state.techView[tree.key] = view;
+      var nodes = visibleNodes(tree, view);
+      var byKey = {};
+      nodes.forEach(function (n) { byKey[n.key] = n; });
+      function nodeLink(key) {
+        var n = byKey[key];
+        return n ? '<a href="#/tech/' + encodeURIComponent(key) + '">' + escapeHtml(n.name) + "</a>" : escapeHtml(key);
+      }
+      var detail = "";
+      if (node) {
+        var children = nodes.filter(function (n) { return n.parents.indexOf(node.key) >= 0; });
+        var effects = node.effects.length ? '<ul class="effects">' + node.effects.map(function (e) {
+          return '<li class="' + e.tone + '">' + escapeHtml(e.text) + "</li>";
+        }).join("") + "</ul>" : "";
+        detail =
+          '<article class="tech-detail">' + techIcon(node.icon, "tech-icon large") + "<div>" +
+          "<h1>" + escapeHtml(node.name) + "</h1>" +
+          '<p class="subtitle">' + escapeHtml(tree.name) + " · Tier " + (node.tier + 1) + " · " + node.points + " research points" +
+          (node.faction ? " · only " + escapeHtml(factionName(node.faction)) : "") + "</p>" +
+          (node.short ? '<p class="section short">' + escapeHtml(node.short) + "</p>" : "") +
+          (effects ? '<section class="section"><h2>Effects</h2>' + effects + "</section>" : "") +
+          (node.buildings.length ? '<section class="section"><h2>Unlocks buildings</h2><ul class="plain-list">' +
+            node.buildings.map(function (b) {
+              return '<li><a href="#/building/' + encodeURIComponent(b.level) + '">' + escapeHtml(b.name) + "</a></li>";
+            }).join("") + "</ul></section>" : "") +
+          (node.upgrades.length ? '<section class="section"><h2>Unit upgrades</h2><ul class="plain-list">' +
+            node.upgrades.map(function (u) {
+              return '<li><a href="#/unit/' + encodeURIComponent(u.unit) + '">' + escapeHtml(u.name) + "</a> → " +
+                '<a href="#/unit/' + encodeURIComponent(u.to) + '">' + escapeHtml(u.to_name) + "</a>" +
+                (u.cost ? ' <span class="faint">(' + u.cost + ")</span>" : "") + "</li>";
+            }).join("") + "</ul></section>" : "") +
+          (node.parents.length || children.length ? '<section class="section"><h2>Research</h2><dl class="facts wide">' +
+            (node.parents.length ? "<dt>Requires</dt><dd>" + node.parents.map(nodeLink).join(", ") + "</dd>" : "") +
+            (children.length ? "<dt>Leads to</dt><dd>" + children.map(function (c) { return nodeLink(c.key); }).join(", ") + "</dd>" : "") +
+            "</dl></section>" : "") +
+          (node.long ? '<section class="section"><h2>History</h2><p class="history">' + escapeHtml(node.long) + "</p></section>" : "") +
+          '<p class="keys">' + escapeHtml(node.tech) + (node.key !== node.tech ? " · node " + escapeHtml(node.key) : "") + "</p>" +
+          "</div></article>";
+      }
+      var selector = tree.factions.length ? '<label class="view-as">View as <select id="f-view">' +
+        '<option value="">Other factions</option>' + tree.factions.map(function (f) {
+          return '<option value="' + escapeHtml(f.key) + '"' + (f.key === view ? " selected" : "") + ">" + escapeHtml(f.name) + "</option>";
+        }).join("") + "</select></label>" : "";
+      setTitle(node ? node.name : tree.name);
+      render(
+        '<div class="crumbs"><a href="#/techs">Technologies</a> · ' + escapeHtml(CAMPAIGN_NAMES[tree.campaign] || "") + "</div>" +
+        (node ? "" : "<h1>" + escapeHtml(tree.name) + '</h1><p class="subtitle">' + tree.nodes.length +
+          " technologies. Pick one for its effects and what it unlocks.</p>") +
+        detail +
+        '<section class="section"><div class="building-head"><h2>' + escapeHtml(node ? tree.name : "The tree") + "</h2>" + selector + "</div>" +
+        techTree(tree, nodes, node) + "</section>"
+      );
+      var select = document.getElementById("f-view");
+      if (select) select.addEventListener("change", function () {
+        state.techView[tree.key] = select.value;
+        // the selected node may not exist for the new faction: show its replacement or the tree
+        var next = node && visibleNodes(tree, select.value).indexOf(node) < 0 ?
+          visibleNodes(tree, select.value).filter(function (n) { return n.tier === node.tier && n.row === node.row; })[0] : node;
+        var hash = "#/tech/" + encodeURIComponent(next ? next.key : tree.key);
+        if (location.hash === hash) route(); else location.hash = hash;
+      });
+      var active = document.querySelector(".tech-node.active");
+      if (active) {
+        var scroller = document.querySelector(".tree-scroll");
+        scroller.scrollLeft = Math.max(0, active.offsetLeft - scroller.clientWidth / 2 + 70);
+      }
+    });
+  }
+
   // --- everything else the game links -------------------------------------------------------------------------
 
   function notCovered(route, what) {
     setTitle("Not covered yet");
     render(
       '<div class="notice"><h1>' + escapeHtml(what) + "</h1>" +
-      "<p>This encyclopedia covers Fireforged's units and buildings so far. The game asked for <code>" + escapeHtml(route) + "</code>.</p>" +
+      "<p>This encyclopedia covers Fireforged's units, buildings and technologies so far. The game asked for <code>" + escapeHtml(route) + "</code>.</p>" +
       '<p><a href="https://atenc.totalwar.com/#/' + escapeHtml(route) + '" target="_blank" rel="noopener">Open it in the vanilla ' +
       'encyclopedia ↗</a> (shows the unmodded game, which may differ from Fireforged).</p>' +
       '<p><a href="#/units">Browse the units</a></p></div>'
@@ -487,7 +638,17 @@
               "</code> in Fireforged's data.</p>" + '<p><a href="https://atenc.totalwar.com/#/' + escapeHtml(path) +
               '" target="_blank" rel="noopener">Try the vanilla encyclopedia ↗</a> · <a href="#/buildings">Browse the buildings</a></p></div>');
           });
-        case "tech": case "techs": return notCovered(path, "Technologies are not covered yet");
+        case "techs":
+          return load("data/techs.json").then(techList);
+        case "tech":
+          return load("data/tech_routes.json").then(function (routes) {
+            return techPage(routes, parts.slice(1).join("/"));
+          }).catch(function () {
+            setTitle("Unknown technology");
+            render('<div class="notice"><h1>Technology not found</h1><p>No technology <code>' + escapeHtml(parts.slice(1).join("/")) +
+              "</code> in Fireforged's data.</p>" + '<p><a href="https://atenc.totalwar.com/#/' + escapeHtml(path) +
+              '" target="_blank" rel="noopener">Try the vanilla encyclopedia ↗</a> · <a href="#/techs">Browse the technologies</a></p></div>');
+          });
         case "skill": case "skills": return notCovered(path, "Skills are not covered yet");
         case "character": case "characters": return notCovered(path, "Characters are not covered yet");
         case "tradition": case "traditions": return notCovered(path, "Traditions are not covered yet");

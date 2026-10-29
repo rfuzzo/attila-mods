@@ -44,6 +44,7 @@ ICON_SOURCES = [
     (GAME_DATA / "data.pack", "icons/game", "ui/buildings/icons"),
     (GAME_DATA / "charlemagne.pack", "icons/charlemagne", "ui/buildings/icons"),
     (GAME_DATA / "belisarius.pack", "icons/belisarius", "ui/buildings/icons"),
+    (GAME_DATA / "data.pack", "icons/game", "ui/campaign ui/technologies"),
 ]
 # multiplayer / test factions that share military groups with real ones
 PLACEHOLDER_FACTION = re.compile(r"_(blue|red|green|yellow|white|black|purple|orange)$")
@@ -538,7 +539,8 @@ def build_buildings(loc, images, factions, units):
                 "capital_only": level["only_in_capital"] == "true",
                 "religion": loc.get(f"religions_onscreen_{level['religion_requirement']}", level["religion_requirement"]),
                 "resource": loc.get(f"resources_onscreen_text_{level['resource_requirement']}", level["resource_requirement"]),
-                "techs": sorted({loc.get(f"technologies_onscreen_name_{t}", t) for t in techs.get(key, [])}),
+                "techs": sorted(({"key": t, "name": loc.get(f"technologies_onscreen_name_{t}", t)} for t in set(techs.get(key, []))),
+                                key=lambda e: (e["name"], e["key"])),
                 "upgrades": [u for u in upgrades.get(key, []) if variants.get(u)],
                 "from": [u for u in downgrades.get(key, []) if variants.get(u)],
                 "variants": level_variants,
@@ -603,6 +605,130 @@ def name_buildings(units, chains, routes):
         unit["buildings"] = sorted(result.values(), key=lambda e: (e["name"], e["level"]))
 
 
+# --- technologies ----------------------------------------------------------------------------------------------
+
+TECH_KINDS = {"rom_roman_civ_top": "Civil", "rom_roman_mil_top": "Military"}
+CAMPAIGNS = {"": "main", "main_attila": "main", "bel_attila": "bel", "cha_attila": "cha"}
+
+
+def build_techs(loc, images, factions, units, chains, routes):
+    """Technology trees: node sets (one per culture, subculture or faction and campaign, civil or military) of nodes
+    placed by tier (column) and indent (row), linked parent -> child. A node with a faction_key is that faction's
+    replacement for the generic node in the same place (Fireforged gives the Roman empires, Goths, Slavs, Picts...
+    their own technologies that way)."""
+    techs = by(table("technologies", "key"), "key")
+    nodes = table("technology_nodes", "key")
+    subcultures = {row["subculture"]: row["culture"] for row in table("cultures_subcultures", "subculture")}
+    subculture_of = {row["key"]: row.get("subculture", "") for row in factions}
+    effects = by(table("effects", "effect"), "effect")
+    tech_effects = {}
+    for row in table("technology_effects_junction"):
+        tech_effects.setdefault(row["technology"], []).append(row)
+    upgrades = {}
+    for row in table("technology_unit_upgrades"):
+        upgrades.setdefault(row["technology"], []).append(row)
+    unlocks = {}
+    for row in table("building_level_required_technology_junctions"):
+        unlocks.setdefault(row["technology_key"], []).append(row["building_level_key"])
+    parents = {}
+    for row in table("technology_node_links"):
+        parents.setdefault(row["child_key"], []).append(row["parent_key"])
+
+    def unit_name(key):
+        unit = units.get(key)
+        return unit["name"] if unit else key
+
+    def picture(icon):
+        source = icon_path(icon, "ui/campaign ui/technologies")
+        if not source:
+            return None
+        if images:
+            dest = OUT / "img/techs" / f"{icon}.png"
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source, dest)  # 53x53 with transparency, small as it is
+        return icon
+
+    index, details, tech_routes = [], {}, {}
+    faction_sets = {row["key"] for row in table("technology_node_sets", "key") if row["faction_key"]}
+    for node_set in table("technology_node_sets", "key"):
+        set_key = node_set["key"]
+        set_nodes = sorted((n for n in nodes if n["technology_node_set"] == set_key and n["technology_key"] in techs),
+                           key=lambda n: (num(n["tier"]), num(n["indent"]), n["key"]))
+        if not set_nodes:
+            continue
+        faction, subculture, culture = node_set["faction_key"], node_set["subculture"], node_set["culture"]
+        if faction:
+            who, subs = loc.get(f"factions_screen_name_{faction}", faction), {subculture_of.get(faction, "")}
+        elif subculture:
+            who, subs = loc.get(f"cultures_subcultures_name_{subculture}", subculture), {subculture}
+        elif culture:
+            who, subs = loc.get(f"cultures_name_{culture}", culture), {s for s, c in subcultures.items() if c == culture}
+        else:
+            who, subs = "Other factions", set()
+        kind = TECH_KINDS.get(node_set["technology_category"], "")
+        campaign = CAMPAIGNS.get(node_set["campaign_key"], "main")
+        if set_key.startswith(("bel_", "cha_")):
+            campaign = set_key[:3]
+
+        def building_ref(level):
+            chain = chains.get(routes.get(level, ""))
+            if not chain:
+                return None
+            entry = next((l for l in chain["levels"] if l["key"] == level), None)
+            if not entry:
+                return None
+            names = [v["name"] for v in entry["variants"] if subs & set(v["subcultures"])] or \
+                [v["name"] for v in entry["variants"]] or [chain["name"]]
+            return {"level": level, "name": names[0]}
+
+        tech_routes[set_key] = set_key
+        node_entries = []
+        for node in set_nodes:
+            tech = techs[node["technology_key"]]
+            key = tech["key"]
+            tech_routes.setdefault(node["key"], set_key)
+            # a technology key in several sets: prefer the grand campaign's culture sets
+            if key not in tech_routes or (campaign == "main" and not faction and tech_routes[key] in faction_sets):
+                tech_routes[key] = set_key
+            effect_list = []
+            for row in tech_effects.get(key, []):
+                text = loc.get(f"effects_description_{row['effect']}")
+                if not text:
+                    continue
+                scope = loc.get(f"campaign_effect_scopes_localised_text_{row['effect_scope']}", "").strip()
+                effect_list.append({"text": format_effect(text, row["value"]) + (" " + scope if scope else ""),
+                                    "tone": effect_tone(effects.get(row["effect"], {}), row["value"])})
+            node_entries.append({
+                "key": node["key"],
+                "tech": key,
+                "faction": node["faction_key"],
+                "name": loc.get(f"technologies_onscreen_name_{key}", key),
+                "icon": picture(tech["icon_name"]),
+                "tier": num(node["tier"]),
+                "row": num(node["indent"]),
+                "points": num(node["research_points_required"]),
+                "short": loc.get(f"technologies_short_description_{key}", ""),
+                "long": loc.get(f"technologies_long_description_{key}", ""),
+                "effects": effect_list,
+                "upgrades": [{"unit": u["unit"], "name": unit_name(u["unit"]), "to": u["target_unit"],
+                              "to_name": unit_name(u["target_unit"]), "cost": num(u["cost"])}
+                             for u in sorted(upgrades.get(key, []), key=lambda u: (unit_name(u["unit"]), u["unit"]))],
+                "buildings": sorted(filter(None, (building_ref(l) for l in set(unlocks.get(key, [])))),
+                                    key=lambda e: (e["name"], e["level"])),
+                "parents": sorted(parents.get(node["key"], [])),
+            })
+        name = f"{who}: {kind.lower()} technologies" if kind else f"{who} technologies"
+        own_factions = sorted({n["faction"] for n in node_entries if n["faction"]})
+        details[set_key] = {"key": set_key, "name": name, "who": who, "kind": kind, "campaign": campaign,
+                            "faction": faction, "nodes": node_entries,
+                            "factions": [{"key": f, "name": loc.get(f"factions_screen_name_{f}", f)} for f in own_factions]}
+        index.append({"key": set_key, "name": name, "who": who, "kind": kind, "campaign": campaign,
+                      "faction": bool(faction), "count": len(node_entries), "icon": node_entries[0]["icon"]})
+
+    index.sort(key=lambda e: (e["campaign"] != "main", e["faction"], e["who"].lower(), e["kind"]))
+    return index, details, tech_routes
+
+
 # --- output ----------------------------------------------------------------------------------------------------
 
 def write_json(path, data):
@@ -637,6 +763,11 @@ def main():
     for key, entry in chains.items():
         write_json(OUT / "data/building" / f"{key}.json", entry)
     write_json(OUT / "data/buildings.json", building_index)
+    tech_index, tech_sets, tech_routes = build_techs(loc, images, factions, details, chains, routes)
+    for key, entry in tech_sets.items():
+        write_json(OUT / "data/tech" / f"{key}.json", entry)
+    write_json(OUT / "data/techs.json", tech_index)
+    write_json(OUT / "data/tech_routes.json", tech_routes)
     for key, entry in details.items():
         write_json(OUT / "data/unit" / f"{key}.json", entry)
     write_json(OUT / "data/units.json", index)
@@ -664,6 +795,7 @@ def main():
         "built": time.strftime("%Y-%m-%d"),
         "units": len(index),
         "buildings": len(building_index),
+        "techs": len(tech_index),
         "aor_map": cultures.AOR_MAP,
         "stat_scale": stat_scale,
         # the grand campaign's subcultures (of its att_ factions), the list's culture chips
@@ -675,15 +807,16 @@ def main():
 
     # drop pictures nothing uses any more
     used = {"units": {e["card"] for e in index if e["card"]},
-            "buildings": {v["picture"] for c in chains.values() for l in c["levels"] for v in l["variants"] if v["picture"]}}
+            "buildings": {v["picture"] for c in chains.values() for l in c["levels"] for v in l["variants"] if v["picture"]},
+            "techs": {n["icon"] for t in tech_sets.values() for n in t["nodes"] if n["icon"]}}
     for kind, names in used.items():
-        for path in (OUT / "img" / kind).glob("*.jpg") if (OUT / "img" / kind).is_dir() else []:
+        for path in (OUT / "img" / kind).glob("*.*") if (OUT / "img" / kind).is_dir() else []:
             if path.stem not in names:
                 path.unlink()
 
     with_card = sum(1 for e in index if e["card"])
-    print(f"{len(index)} units ({with_card} with a card) and {len(building_index)} building chains written to "
-          f"{OUT.relative_to(REPO)}/")
+    print(f"{len(index)} units ({with_card} with a card), {len(building_index)} building chains and "
+          f"{len(tech_index)} technology trees written to {OUT.relative_to(REPO)}/")
 
 
 if __name__ == "__main__":

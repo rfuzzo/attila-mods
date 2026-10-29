@@ -20,7 +20,7 @@ Fixes for Fireforged Empire's scripts; load it after Fireforged. Inert without i
 
 **Download:** [fireforged_encyclopedia.pack](https://github.com/rfuzzo/attila-mods/raw/main/packs/fireforged_encyclopedia.pack) · **Site:** [rfuzzo.github.io/attila-mods](https://rfuzzo.github.io/attila-mods/)
 
-An encyclopedia of Fireforged Empire's units (stats, abilities, recruitment and areas of recruitment, the mod's own descriptions, links to the culture pages on [late-roman.ru](https://late-roman.ru/fireforged-empire/units/)) and buildings (each chain's tiers per culture, effects, recruits, garrisons, requirements), built from the mod's data. With the pack and a TWASE that has `twase.set_encyclopedia_url`, the game's unit and building links open it. Inert without Fireforged. Technologies and the rest are not covered yet; those links offer the vanilla encyclopedia.
+An encyclopedia of Fireforged Empire's units (stats, abilities, recruitment and areas of recruitment, the mod's own descriptions, links to the culture pages on [late-roman.ru](https://late-roman.ru/fireforged-empire/units/)) buildings (each chain's tiers per culture, effects, recruits, garrisons, requirements) and technology trees (per culture and faction, with Fireforged's faction-specific technologies, effects, unlocked buildings, unit upgrades), built from the mod's data. With the pack and a TWASE that has `twase.set_encyclopedia_url`, the game's unit, building and technology links open it. Inert without Fireforged. Skills, characters and the rest are not covered yet; those links offer the vanilla encyclopedia.
 
 ## TDD TWASE Slots
 

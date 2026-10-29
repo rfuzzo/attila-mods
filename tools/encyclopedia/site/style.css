@@ -202,6 +202,29 @@ p { margin: 0 0 12px; }
 .level-card.active { color: var(--gold); }
 .level-card.active .level-pic { border-color: var(--gold); }
 
+/* technologies */
+.faint { color: var(--text-faint); }
+.tech-sets { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+.tech-set { display: flex; gap: 12px; align-items: center; padding: 10px; background: var(--bg-raised); border: 1px solid var(--line); border-radius: var(--radius); color: var(--text); }
+.tech-set:hover { border-color: var(--gold-dim); text-decoration: none; }
+.tech-set .name { display: block; }
+.tech-set .sub { display: block; font-size: .8rem; color: var(--text-faint); }
+.tech-icon { width: 44px; height: 44px; flex: none; border-radius: 50%; background: var(--bg-sunken); }
+.tech-icon.none { display: inline-block; border: 1px dashed var(--line-strong); }
+.tech-icon.large { width: 72px; height: 72px; }
+.tech-detail { display: grid; grid-template-columns: 72px 1fr; gap: 20px; margin-bottom: 8px; max-width: 900px; }
+.tree-scroll { overflow-x: auto; padding-bottom: 8px; background: var(--bg-sunken); border: 1px solid var(--line); border-radius: var(--radius); }
+.tech-tree { position: relative; }
+.tech-tree svg { position: absolute; left: 0; top: 0; }
+.tech-tree path { fill: none; stroke: var(--line-strong); stroke-width: 2; }
+.tech-tree path.hot { stroke: var(--gold); }
+.tech-node { position: absolute; width: 134px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; color: var(--text-dim); font-size: .78rem; line-height: 1.15; }
+.tech-node:hover { color: var(--text); text-decoration: none; }
+.tech-node .name { background: var(--bg-sunken); padding: 0 4px; border-radius: 3px; }
+.tech-node .tech-icon { border: 2px solid var(--line-strong); }
+.tech-node.active { color: var(--gold); }
+.tech-node.active .tech-icon { border-color: var(--gold); }
+
 @media (max-width: 720px) {
   h1 { font-size: 1.6rem; }
   .unit { grid-template-columns: 1fr; }
@@ -210,6 +233,7 @@ p { margin: 0 0 12px; }
   .bld-pic.large { width: 160px; }
   .tier { grid-template-columns: 1fr; gap: 4px; }
   .building-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .tech-detail { grid-template-columns: 1fr; gap: 8px; }
   .facts { flex: 1 1 180px; width: auto; }
   .search { margin-left: 0; max-width: none; }
 }
