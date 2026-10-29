@@ -16,6 +16,12 @@ Trade regions in diplomacy (unifies Fireforged Empire's and Region Trading Reloa
 
 Fixes for Fireforged Empire's scripts; load it after Fireforged. Inert without it.
 
+## Fireforged Encyclopedia
+
+**Download:** [fireforged_encyclopedia.pack](https://github.com/rfuzzo/attila-mods/raw/main/packs/fireforged_encyclopedia.pack) · **Site:** [rfuzzo.github.io/attila-mods](https://rfuzzo.github.io/attila-mods/)
+
+An encyclopedia of Fireforged Empire's units (stats, abilities, recruitment, the mod's own descriptions, links to the culture pages on [late-roman.ru](https://late-roman.ru/fireforged-empire/units/)), built from the mod's data. With the pack and a TWASE that has `twase.set_encyclopedia_url`, the game's unit links open it. Inert without Fireforged. Buildings, technologies and the rest are not covered yet; those links offer the vanilla encyclopedia.
+
 ## TDD TWASE Slots
 
 **Download:** [tdd_twase_slots.pack](https://github.com/rfuzzo/attila-mods/raw/main/packs/tdd_twase_slots.pack)
@@ -33,6 +39,10 @@ The Dawnless Days' 12/9 settlement slots and encyclopedia link through TWASE (`t
 - macOS: `tools/deploy.sh`, `tools/play.sh`
 - Windows: `tools/deploy.ps1`, `tools/play.ps1` (`play.cmd` to double-click)
 
+### encyclopedia
+
+`tools/encyclopedia/build.py` regenerates `encyclopedia/` from `extracted/` (macOS). Commit the result; pushing to `main` publishes it.
+
 ### build-packs
 
 `tools/build-packs.sh` rebuilds `packs/` (macOS, or Git Bash on Windows).
@@ -40,4 +50,5 @@ The Dawnless Days' 12/9 settlement slots and encyclopedia link through TWASE (`t
 ## Other folders
 
 - `docs/` – plans, designs and reviews
+- `encyclopedia/` – the generated encyclopedia site (published by `.github/workflows/encyclopedia.yml`)
 - `extracted/` – unpacked game and mod files for reference, git-ignored

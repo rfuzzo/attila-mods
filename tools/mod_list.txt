@@ -4,4 +4,5 @@ mod "@Fireforged-Empire_1.pack";
 mod "@Fireforged-Empire_2.pack";
 mod "@Fireforged-Empire_ballast.pack";
 mod "fireforged_fixes.pack";
+mod "fireforged_encyclopedia.pack";
 mod "region_trading.pack";
