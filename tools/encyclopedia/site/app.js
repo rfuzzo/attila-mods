@@ -477,7 +477,8 @@
       }).join(""));
   }
 
-  var TREE = { col: 150, row: 92, pad: 8 };
+  // node boxes are TREE.box wide with the icon (radius TREE.r) centred at the top
+  var TREE = { col: 150, row: 92, pad: 8, box: 134, r: 22 };
 
   // the nodes a faction sees: its own, and the generic ones it has no own node in place of
   function visibleNodes(tree, faction) {
@@ -496,17 +497,48 @@
     var width = tiers * TREE.col, height = rows * TREE.row;
     function x(n) { return n.tier * TREE.col + TREE.pad; }
     function y(n) { return n.row * TREE.row + TREE.pad; }
-    var lines = [];
+    // a point on the icon's side (1 top, 2 right, 3 bottom, 4 left), moved along the side by offset icon sizes
+    function anchor(n, side, offset) {
+      var cx = x(n) + TREE.box / 2, cy = y(n) + TREE.r, shift = offset * 2 * TREE.r * 0.6;
+      if (side === 1) return [cx + shift, cy - TREE.r];
+      if (side === 3) return [cx + shift, cy + TREE.r];
+      if (side === 4) return [cx - TREE.r, cy + shift];
+      return [cx + TREE.r, cy + shift];
+    }
+    // right-angled connectors as the game draws them: leave along the parent's side, enter along the child's
+    function connector(parent, n, link) {
+      var out = link[1], into = link[2];
+      var s = anchor(parent, out, link[3]), e = anchor(n, into, link[4]);
+      var path = "M" + s[0] + " " + s[1];
+      var outVertical = out === 1 || out === 3, inVertical = into === 1 || into === 3;
+      if (s[0] === e[0] || s[1] === e[1]) {
+        path += " L" + e[0] + " " + e[1];
+      } else if (outVertical && !inVertical) {
+        path += " V" + e[1] + " H" + e[0];
+      } else if (!outVertical && inVertical) {
+        path += " H" + e[0] + " V" + e[1];
+      } else if (outVertical) {
+        var midY = (s[1] + e[1]) / 2;
+        path += " V" + midY + " H" + e[0] + " V" + e[1];
+      } else {
+        // turn in the gap just before the child's column, so long links run along their row
+        var bend = e[0] - (TREE.col - 2 * TREE.r) / 2;
+        if (bend <= s[0]) bend = (s[0] + e[0]) / 2;
+        path += " H" + bend + " V" + e[1] + " H" + e[0];
+      }
+      return path;
+    }
+    var lines = [], hot = [];
     nodes.forEach(function (n) {
-      n.parents.forEach(function (p) {
-        var parent = byKey[p];
+      (n.links || []).forEach(function (link) {
+        var parent = byKey[link[0]];
         if (!parent) return;
-        var x1 = x(parent) + TREE.col - 2 * TREE.pad, y1 = y(parent) + 22, x2 = x(n), y2 = y(n) + 22;
-        var mid = (x1 + x2) / 2;
-        lines.push('<path d="M' + x1 + " " + y1 + " C" + mid + " " + y1 + " " + mid + " " + y2 + " " + x2 + " " + y2 + '"' +
-          (selected && (n === selected || parent === selected) ? ' class="hot"' : "") + "/>");
+        var line = '<path d="' + connector(parent, n, link) + '"/>';
+        if (selected && (n === selected || parent === selected)) hot.push(line.replace("<path", '<path class="hot"'));
+        else lines.push(line);
       });
     });
+    lines = lines.concat(hot);  // highlighted connectors on top
     return '<div class="tree-scroll"><div class="tech-tree" style="width:' + width + "px;height:" + height + 'px">' +
       '<svg width="' + width + '" height="' + height + '" aria-hidden="true">' + lines.join("") + "</svg>" +
       nodes.map(function (n) {
@@ -542,7 +574,7 @@
           return '<li class="' + e.tone + '">' + escapeHtml(e.text) + "</li>";
         }).join("") + "</ul>" : "";
         detail =
-          '<article class="tech-detail">' + techIcon(node.icon, "tech-icon large") + "<div>" +
+          '<article class="tech-detail">' + techIcon(node.icon, "tech-icon large").replace(' loading="lazy"', "") + "<div>" +
           "<h1>" + escapeHtml(node.name) + "</h1>" +
           '<p class="subtitle">' + escapeHtml(tree.name) + " · Tier " + (node.tier + 1) + " · " + node.points + " research points" +
           (node.faction ? " · only " + escapeHtml(factionName(node.faction)) : "") + "</p>" +

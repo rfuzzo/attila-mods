@@ -216,7 +216,7 @@ p { margin: 0 0 12px; }
 .tree-scroll { overflow-x: auto; padding-bottom: 8px; background: var(--bg-sunken); border: 1px solid var(--line); border-radius: var(--radius); }
 .tech-tree { position: relative; }
 .tech-tree svg { position: absolute; left: 0; top: 0; }
-.tech-tree path { fill: none; stroke: var(--line-strong); stroke-width: 2; }
+.tech-tree path { fill: none; stroke: var(--line-strong); stroke-width: 2; stroke-linejoin: round; }
 .tech-tree path.hot { stroke: var(--gold); }
 .tech-node { position: absolute; width: 134px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; color: var(--text-dim); font-size: .78rem; line-height: 1.15; }
 .tech-node:hover { color: var(--text); text-decoration: none; }

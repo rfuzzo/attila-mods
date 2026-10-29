@@ -630,9 +630,14 @@ def build_techs(loc, images, factions, units, chains, routes):
     unlocks = {}
     for row in table("building_level_required_technology_junctions"):
         unlocks.setdefault(row["technology_key"], []).append(row["building_level_key"])
-    parents = {}
+    parents, links = {}, {}
     for row in table("technology_node_links"):
         parents.setdefault(row["child_key"], []).append(row["parent_key"])
+        # where the game draws the connector: a side of each icon (1 top, 2 right, 3 bottom, 4 left) and an offset
+        # along it, in icon sizes
+        links.setdefault(row["child_key"], []).append([
+            row["parent_key"], num(row["parent_link_position"]), num(row["child_link_position"]),
+            num(row["parent_link_position_offset"]), num(row["child_link_position_offset"])])
 
     def unit_name(key):
         unit = units.get(key)
@@ -716,6 +721,7 @@ def build_techs(loc, images, factions, units, chains, routes):
                 "buildings": sorted(filter(None, (building_ref(l) for l in set(unlocks.get(key, [])))),
                                     key=lambda e: (e["name"], e["level"])),
                 "parents": sorted(parents.get(node["key"], [])),
+                "links": sorted(links.get(node["key"], [])),
             })
         name = f"{who}: {kind.lower()} technologies" if kind else f"{who} technologies"
         own_factions = sorted({n["faction"] for n in node_entries if n["faction"]})
